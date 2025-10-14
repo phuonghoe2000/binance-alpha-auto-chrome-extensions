@@ -1,16 +1,16 @@
 v0.0.30
 
-- 增加手动卖出模式(强烈推荐)
-- 修复卖出不重试问题
+- Thêm chế độ bán thủ công (rất khuyến nghị)
+- Sửa lỗi không thử lại khi bán
 
 v0.0.25
 
-- 增加随机金额
-- 修复卖出重试
+- Thêm chế độ số tiền ngẫu nhiên
+- Sửa lỗi thử lại bán
 
 v0.0.22
 
-- 增加卖出单超时检测，重新卖出
-- 增加每日交易额统计
-- 优化ui展示方式
-- 优化代码结构
+- Thêm kiểm tra quá thời gian khi bán và bán lại
+- Bổ sung thống kê khối lượng giao dịch hàng ngày
+- Tối ưu cách hiển thị giao diện
+- Tối ưu cấu trúc mã nguồn

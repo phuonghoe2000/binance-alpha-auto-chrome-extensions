@@ -60,31 +60,31 @@ export const OrderMode = ({
     };
 
     if (!data.timeout || !data.count) {
-      throw new Error('参数不能为空');
+      throw new Error('Tham số không được để trống');
     }
     if (isNaN(Number(data.count))) {
-      throw new Error('参数必须为数字');
+      throw new Error('Tham số phải là số');
     }
-    // 校验下单金额
+    // kiểm tra số tiền đặt lệnh
     if (data.orderAmountMode === 'Fixed') {
       if (!data.amount) {
-        throw new Error('下单金额不能为空');
+        throw new Error('Số tiền đặt lệnh không được để trống');
       }
       if (isNaN(Number(data.amount))) {
-        throw new Error('下单金额必须为数字');
+        throw new Error('Số tiền đặt lệnh phải là số');
       }
     } else if (data.orderAmountMode === 'Random') {
       if (!data.maxAmount || !data.minAmount) {
-        throw new Error('下单金额范围不能为空');
+        throw new Error('Khoảng số tiền đặt lệnh không được để trống');
       }
       if (isNaN(Number(data.maxAmount)) || isNaN(Number(data.minAmount))) {
-        throw new Error('下单金额范围必须为数字');
+        throw new Error('Khoảng số tiền đặt lệnh phải là số');
       }
       if (Number(data.maxAmount) < Number(data.minAmount)) {
-        throw new Error('下单金额范围错误');
+        throw new Error('Khoảng số tiền đặt lệnh không hợp lệ');
       }
     } else {
-      throw new Error('下单金额模式错误');
+      throw new Error('Chế độ số tiền đặt lệnh không hợp lệ');
     }
 
     const runNum = setting['runNum'];
@@ -96,9 +96,9 @@ export const OrderMode = ({
     data['runType'] = runType;
 
     if (data['runType'] === 'sum' && !data['runNum']) {
-      throw new Error('请输入运行次数');
+      throw new Error('Vui lòng nhập số lần chạy');
     } else if (data['runType'] === 'price' && !data['runPrice']) {
-      throw new Error('请输入运行价格');
+      throw new Error('Vui lòng nhập mức giá chạy');
     }
 
     return data;
@@ -107,7 +107,7 @@ export const OrderMode = ({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
     if (runing) {
       stopRef.current = true;
-      appendLog('正在停止中，请等待本次执行完成', 'info');
+      appendLog('Đang dừng, vui lòng chờ lần thực thi hiện tại hoàn tất', 'info');
       e.preventDefault();
       return;
     }
@@ -120,20 +120,20 @@ export const OrderMode = ({
 
     const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
 
-    const id = await getId(tab, api).catch(() => null); // 获取货币id
+    const id = await getId(tab, api).catch(() => null); // lấy id đồng tiền
 
     if (!id || !id.symbol) {
-      appendLog('获取货币id失败', 'error');
+      appendLog('Lấy ID đồng tiền thất bại', 'error');
       setRuning(false);
       return;
     }
 
     const { symbol, mul } = id;
 
-    appendLog(`获取到货币id: ${symbol} 积分乘数: ${mul}`, 'info');
+    appendLog(`Đã lấy ID đồng tiền: ${symbol} Hệ số điểm: ${mul}`, 'info');
 
     if (!symbol) {
-      appendLog('获取货币id失败', 'error');
+      appendLog('Lấy ID đồng tiền thất bại', 'error');
       setRuning(false);
       return;
     }
@@ -142,27 +142,27 @@ export const OrderMode = ({
     if (secret) {
       startLoopAuth(tab, secret, () => {
         stopRef.current = true;
-        appendLog('出现验证码校验失败，自动停止', 'error');
+        appendLog('Xuất hiện xác minh mã bảo mật thất bại, tự động dừng', 'error');
       });
     }
 
     const runType = options.runType;
 
-    let runNum = options.runNum ? Number(options.runNum) : 1; // 运行次数
+    let runNum = options.runNum ? Number(options.runNum) : 1; // số lần chạy
 
-    const runPrice = options.runPrice ? Number(options.runPrice) : 1; // 运行金额
+    const runPrice = options.runPrice ? Number(options.runPrice) : 1; // tổng giá trị chạy
 
     if (runType === 'price') {
       runNum = Number.MAX_VALUE;
     }
 
-    const timeout = options.timeout ? Number(options.timeout) : 1; // 下单超时时间
+    const timeout = options.timeout ? Number(options.timeout) : 1; // thời gian chờ lệnh
 
-    const count = Number(options.count); // 保守设置
+    const count = Number(options.count); // cài đặt thận trọng
 
     let balance = await getBalance(tab);
 
-    if (!balance) return console.error('获取余额失败');
+    if (!balance) return console.error('Lấy số dư thất bại');
 
     if (!startBalance) {
       setStartBalance(balance);
@@ -173,24 +173,24 @@ export const OrderMode = ({
       injectDependencies(tab);
 
       if (stopRef.current) {
-        appendLog(`意外终止`, 'error');
+        appendLog(`Dừng đột ngột`, 'error');
         break;
       }
-      appendLog(`当前轮次: ${i + 1}`, 'info');
+      appendLog(`Vòng hiện tại: ${i + 1}`, 'info');
 
       try {
-        // 等待1s
+        // chờ 1 giây
         await new Promise(resolve => setTimeout(resolve, 1000));
-        // 校验是否有未知弹窗
+        // kiểm tra có cửa sổ bật lên lạ hay không
         await checkUnknownModal(tab);
-        // 校验是否有未取消的订单
+        // kiểm tra có đơn hàng chưa hủy hay không
         await cancelOrder(tab);
-        // 兜底卖出
+        // bán phòng thủ
         await backSell(tab, api, symbol, appendLog, timeout);
-        // 回到买入面板
+        // quay lại bảng mua
         await jumpToBuy(tab);
 
-        // k线检测
+        // kiểm tra nến K
         const stable = await checkMarketStable(api, symbol);
 
         if (!stable.stable) {
@@ -203,28 +203,31 @@ export const OrderMode = ({
         }
 
         let buyPrice = await getPrice(symbol, api);
-        appendLog(`保守设置次数:${count}`, 'info');
+        appendLog(`Số lần kiểm tra thận trọng:${count}`, 'info');
         for (let j = 0; j < count; j++) {
           await new Promise(resolve => setTimeout(resolve, 500));
-          // 获取买入价
-          const curPrice = await getPrice(symbol, api); // 获取价格
-          appendLog(`当前价格：${curPrice}`, 'info');
+          // lấy giá mua
+          const curPrice = await getPrice(symbol, api); // lấy giá
+          appendLog(`Giá hiện tại: ${curPrice}`, 'info');
           if (Number(curPrice) < Number(buyPrice)) {
             buyPrice = curPrice;
-            appendLog(`价格下跌，调整买入价为${buyPrice}`, 'info');
+            appendLog(`Giá giảm, điều chỉnh giá mua thành ${buyPrice}`, 'info');
           }
         }
-        if (!buyPrice) throw new Error('获取价格失败');
+        if (!buyPrice) throw new Error('Lấy giá thất bại');
 
-        appendLog(`获取到买入价格: ${buyPrice}`, 'info');
+        appendLog(`Đã lấy được giá mua: ${buyPrice}`, 'info');
 
-        // buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // 调整买入价
-        buyPrice = stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // 调整买入价
-        // 关闭反向订单
+        // buyPrice = stable.trend === 'Xu hướng tăng' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // điều chỉnh giá mua
+        buyPrice =
+          stable.trend === 'Xu hướng tăng'
+            ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
+            : buyPrice; // điều chỉnh giá mua
+        // đóng lệnh ngược
         await closeReverseOrder(tab);
-        // 操作写入买入价格
+        // thao tác ghi giá mua
         await setPrice(tab, buyPrice);
-        // 计算买入金额
+        // tính số tiền mua
         const amount =
           options.orderAmountMode === 'Fixed'
             ? options.amount
@@ -232,22 +235,22 @@ export const OrderMode = ({
                 (Number(options.maxAmount) - Number(options.minAmount)) * Math.random() + Number(options.minAmount),
                 2,
               ).toString();
-        // 设置买入金额
+        // đặt số tiền mua
         await setLimitTotal(tab, amount);
 
-        // 操作确认买入
+        // thao tác xác nhận mua
         await callSubmit(tab);
-        // 判断是否出现验证码
+        // kiểm tra có xuất hiện mã xác minh hay không
         const isAuth = await isAuthModal(tab);
-        // 出现验证弹窗等待
+        // nếu xuất hiện cửa sổ xác minh thì chờ
         if (isAuth) {
-          appendLog('出现验证码等待过验证', 'info');
+          appendLog('Xuất hiện mã xác minh, đang chờ vượt qua kiểm tra', 'info');
           await new Promise(resolve => setTimeout(resolve, 3000));
         }
-        // 等待订单完成
+        // chờ lệnh hoàn tất
         await waitOrder(tab, timeout);
 
-        appendLog(`下单成功: 价格： ${buyPrice} 金额：${amount}`, 'success');
+        appendLog(`Đặt lệnh thành công: Giá: ${buyPrice} Số tiền: ${amount}`, 'success');
 
         const day = dayjs().utc().format('YYYY-MM-DD');
 
@@ -259,15 +262,15 @@ export const OrderMode = ({
 
         await backSell(tab, api, symbol, appendLog, timeout);
 
-        // 等待2s
+        // chờ 2 giây
         await new Promise(resolve => setTimeout(resolve, 1000));
 
-        // 刷新余额
+        // làm mới số dư
         const balance = await getBalance(tab);
 
-        if (!balance) throw new Error('获取余额失败');
+        if (!balance) throw new Error('Lấy số dư thất bại');
 
-        appendLog(`刷新余额: ${balance}`, 'info');
+        appendLog(`Đã làm mới số dư: ${balance}`, 'info');
 
         setCurrentBalance(balance);
 
@@ -282,7 +285,7 @@ export const OrderMode = ({
         }
       } catch (error: any) {
         appendLog(error.message, 'error');
-        if (error.message.includes('刷新页面')) {
+        if (error.message.includes('Làm mới trang')) {
           if (tab.id) await chrome.tabs.reload(tab.id);
           await new Promise(resolve => setTimeout(resolve, 5000));
         } else if (index % 10 === 0) {
@@ -293,26 +296,26 @@ export const OrderMode = ({
       }
     }
 
-    // 等待1s
+    // chờ 1 giây
     await new Promise(resolve => setTimeout(resolve, 1000));
-    // 校验是否有未知弹窗
+    // kiểm tra có cửa sổ bật lên lạ hay không
     await checkUnknownModal(tab);
-    // 校验是否有未取消的订单
+    // kiểm tra có đơn hàng chưa hủy hay không
     await cancelOrder(tab);
-    // 兜底卖出
+    // bán phòng thủ
     await backSell(tab, api, symbol, appendLog, timeout);
 
     balance = await getBalance(tab);
 
-    if (!balance) throw new Error('获取余额失败');
+    if (!balance) throw new Error('Lấy số dư thất bại');
 
-    appendLog(`刷新余额: ${balance}`, 'info');
+    appendLog(`Đã làm mới số dư: ${balance}`, 'info');
 
     setCurrentBalance(balance);
 
     setNum(Date.now());
 
-    appendLog('执行结束', 'success');
+    appendLog('Hoàn tất thực thi', 'success');
 
     if (secret) stopLoopAuth();
 
@@ -323,14 +326,14 @@ export const OrderMode = ({
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="count" className="w-28 flex-none">
-          保守设置(检测价格波动次数)
+          Thiết lập thận trọng (số lần kiểm tra giá)
         </Label>
         <Input
           type="text"
           name="count"
           id="count"
           disabled={runing}
-          placeholder="保守设置(检测价格波动次数)"
+          placeholder="Thiết lập thận trọng (số lần kiểm tra giá)"
           defaultValue={orderSetting.count ?? '3'}
           onChange={e => orderSettingStorage.setVal({ count: e.target.value ?? '' })}
         />
@@ -338,21 +341,21 @@ export const OrderMode = ({
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="timeout" className="w-28 flex-none">
-          挂单超时(秒)
+          Thời gian chờ lệnh (giây)
         </Label>
         <Input
           type="text"
           name="timeout"
           id="timeout"
           disabled={runing}
-          placeholder={`挂单超时`}
+          placeholder={`Thời gian chờ lệnh`}
           defaultValue={orderSetting.timeout ?? '3'}
           onChange={e => orderSettingStorage.setVal({ timeout: e.target.value ?? '' })}
         />
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label className="w-28 flex-none">下单金额模式</Label>
+        <Label className="w-28 flex-none">Chế độ số tiền đặt lệnh</Label>
         <RadioGroup
           name="orderAmountMode"
           disabled={runing}
@@ -362,13 +365,13 @@ export const OrderMode = ({
           <div className="flex items-center">
             <RadioGroupItem value="Fixed" id="Fixed" />
             <Label htmlFor="Fixed" className="pl-2 text-xs">
-              固定
+              Cố định
             </Label>
           </div>
           <div className="flex items-center">
             <RadioGroupItem value="Random" id="Random" />
             <Label htmlFor="Random" className="pl-2 text-xs text-red-500">
-              随机
+              Ngẫu nhiên
             </Label>
           </div>
         </RadioGroup>
@@ -380,7 +383,7 @@ export const OrderMode = ({
           orderSetting.orderAmountMode === 'Random' ? 'hidden' : '',
         )}>
         <Label htmlFor="amount" className="w-28 flex-none">
-          下单金额(每次操作金额{'(USDT)'})
+          Số tiền đặt lệnh (mỗi lần thao tác{'(USDT)'})
         </Label>
         <Input
           autoComplete="off"
@@ -391,7 +394,7 @@ export const OrderMode = ({
           type="text"
           name="amount"
           id="amount"
-          placeholder={`下单金额(每次操作金额(USDT))`}
+          placeholder={`Số tiền đặt lệnh (mỗi lần thao tác (USDT))`}
           defaultValue={orderSetting.amount ?? ''}
           onChange={e => orderSettingStorage.setVal({ amount: e.target.value ?? '' })}
         />
@@ -402,7 +405,7 @@ export const OrderMode = ({
           'flex w-full max-w-sm items-center justify-between gap-3',
           orderSetting.orderAmountMode === 'Fixed' ? 'hidden' : '',
         )}>
-        <Label className="w-28 flex-none">下单金额(每次操作金额{'(USDT)'})</Label>
+        <Label className="w-28 flex-none">Số tiền đặt lệnh (mỗi lần thao tác{'(USDT)'})</Label>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Input
             autoComplete="off"
@@ -413,7 +416,7 @@ export const OrderMode = ({
             type="text"
             name="minAmount"
             id="minAmount"
-            placeholder={`最小金额`}
+            placeholder={`Số tiền tối thiểu`}
             defaultValue={orderSetting.minAmount ?? '50'}
             onChange={e => orderSettingStorage.setVal({ minAmount: e.target.value ?? '' })}
           />
@@ -427,7 +430,7 @@ export const OrderMode = ({
             type="text"
             name="maxAmount"
             id="maxAmount"
-            placeholder={`最大金额`}
+            placeholder={`Số tiền tối đa`}
             defaultValue={orderSetting.maxAmount ?? '100'}
             onChange={e => orderSettingStorage.setVal({ maxAmount: e.target.value ?? '' })}
           />
@@ -436,7 +439,7 @@ export const OrderMode = ({
 
       <div>
         <Button className="w-full" type="submit" disabled={!startBalance}>
-          {runing ? '终止' : '执行'}
+          {runing ? 'Dừng' : 'Thực thi'}
         </Button>
       </div>
     </form>

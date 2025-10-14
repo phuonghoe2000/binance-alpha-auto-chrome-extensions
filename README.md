@@ -3,44 +3,44 @@
       <img alt="Logo" src="./docs/app.png" />
   </picture>
 
-## 🚀 邀请链接 [点击直达](https://accounts.maxweb.black/register?ref=TETAP)
+## 🚀 Liên kết mời [Nhấn để tham gia](https://accounts.maxweb.black/register?ref=TETAP)
 
-## 项目介绍
+## Giới thiệu dự án
 
-一个基于 Chrome 扩展的 Binance Alpha 流水刷取工具，专为刷交易流水和获取空投积分设计。通过反向交易操作和监控价格，自动操作交易，同时记录操作日志，帮助用户快速积累积分。
+Đây là công cụ tạo dòng giao dịch Binance Alpha dưới dạng tiện ích Chrome, được thiết kế để tự động tạo giao dịch và tích lũy điểm airdrop. Bằng cách thực hiện lệnh ngược và theo dõi giá, tiện ích sẽ thao tác giao dịch tự động và ghi lại nhật ký, giúp bạn tích lũy điểm nhanh chóng.
 
 </div>
 
-## 功能特点
+## Tính năng nổi bật
 
-- **流水刷取**：自动操作交易，快速累计 Alpha 流水。
-- **空投积分**：通过流水刷取帮助获取空投积分。
-- **反向订单**：可设置小数点保留和反向价格，安全生成流水。
-- **价格波动检测**：连续监控价格，支持保守模式，防止异常波动。
-- **日志输出**：实时显示每轮操作日志，方便追踪流水和积分情况。
-- **操作损耗统计**：显示每轮操作对账户余额的影响。
-- **多轮操作支持**：可设置循环次数，一键生成多轮流水。
+- **Tạo dòng giao dịch**: Tự động thao tác giao dịch, nhanh chóng tích lũy dòng Alpha.
+- **Tích điểm airdrop**: Hỗ trợ thu thập điểm airdrop thông qua việc tạo giao dịch.
+- **Lệnh ngược**: Có thể thiết lập số chữ số thập phân và giá ngược để tạo dòng an toàn.
+- **Theo dõi biến động giá**: Giám sát giá liên tục, hỗ trợ chế độ thận trọng để tránh biến động bất thường.
+- **Xuất nhật ký**: Hiển thị nhật ký từng vòng theo thời gian thực, tiện theo dõi dòng và điểm.
+- **Thống kê hao hụt thao tác**: Hiển thị ảnh hưởng của mỗi vòng đến số dư tài khoản.
+- **Hỗ trợ nhiều vòng**: Thiết lập số vòng lặp, tạo dòng hàng loạt chỉ với một lần bấm.
 
 
-## 详细说明
-[点击查看](https://jcna3m5r8klj.feishu.cn/drive/folder/OUNgfvBnKlZtqBd84wCc356ynDd?from=from_copylink)
+## Thuyết minh chi tiết
+[Nhấn để xem](https://jcna3m5r8klj.feishu.cn/drive/folder/OUNgfvBnKlZtqBd84wCc356ynDd?from=from_copylink)
 
-## 💰 赞助支持
+## 💰 Tài trợ
 
-您的每一份支持都是我们前进的动力
-一杯Coffee的微信赞赏
+Mọi sự ủng hộ của bạn đều là động lực để chúng tôi tiếp tục phát triển.
+Quét mã WeChat để ủng hộ một ly cà phê ☕
 
-感谢所有的支持者，得到你们的支持我将会更加完善开源库的能力！ 🚀
+Cảm ơn tất cả những người đã ủng hộ! Nhờ sự hỗ trợ của bạn, tôi sẽ tiếp tục hoàn thiện thư viện nguồn mở này. 🚀
 
 <picture>
     <img alt="Logo" src="./docs/wechat.jpg" />
 </picture>
 
-## 进群交流
+## Tham gia cộng đồng
 
-有任何问题哦度可以在issues反馈，或者加入我的qq群反馈。
+Nếu có bất kỳ vấn đề nào, bạn có thể tạo issue hoặc tham gia QQ group của tôi để trao đổi.
 
-点击链接加入群聊：https://qm.qq.com/q/sxomf5yebY
+Nhấn vào liên kết để tham gia nhóm: https://qm.qq.com/q/sxomf5yebY
 
 <picture>
     <img alt="Logo" src="./docs/qrcode.jpg" />

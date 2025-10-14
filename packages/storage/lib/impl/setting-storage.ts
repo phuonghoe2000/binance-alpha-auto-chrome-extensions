@@ -6,7 +6,7 @@ import type { BaseStorageType } from '../base/index.js';
 export type SettingState = {
   amount: string;
   timeout: string;
-  // 上限方式
+  // cách đặt giới hạn
   runType: 'sum' | 'price';
   runNum: string;
   runPrice: string;
@@ -14,17 +14,17 @@ export type SettingState = {
   dot: string;
   type: 'Buy' | 'Sell';
   mode: 'Reverse' | 'Order';
-  // 卖出超时次数(超出次数将以最佳价格卖出止损)
+  // số lần quá thời gian bán (vượt quá sẽ bán cắt lỗ theo giá tốt nhất)
   timeoutCount: string;
-  // 下单金额模式 固定金额 随机金额
+  // chế độ số tiền đặt lệnh: cố định hoặc ngẫu nhiên
   orderAmountMode: 'Fixed' | 'Random';
-  // 最高随机金额
+  // số tiền ngẫu nhiên tối đa
   maxAmount: string;
-  // 最低随机金额
+  // số tiền ngẫu nhiên tối thiểu
   minAmount: string;
-  // 二次验证(secret)
+  // xác minh lần hai (secret)
   secret: string;
-  // api地址
+  // địa chỉ API
   api: string;
 };
 

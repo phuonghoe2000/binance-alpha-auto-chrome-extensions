@@ -1,7 +1,7 @@
 {
   "name": "binance-alpha-auto-chrome-extensions",
   "version": "0.0.71",
-  "description": "币安 Alpha 小助手",
+  "description": "Trợ lý Binance Alpha",
   "license": "MIT",
   "private": true,
   "sideEffects": false,

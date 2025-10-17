@@ -62,31 +62,31 @@ export const OrderMode = ({
     };
 
     if (!data.timeout || !data.count) {
-      throw new Error('参数不能为空');
+      throw new Error('Tham số không được để trống');
     }
     if (isNaN(Number(data.count))) {
-      throw new Error('参数必须为数字');
+      throw new Error('Tham số phải là số');
     }
     // 校验下单金额
     if (data.orderAmountMode === 'Fixed') {
       if (!data.amount) {
-        throw new Error('下单金额不能为空');
+        throw new Error('Số tiền đặt lệnh không được để trống');
       }
       if (isNaN(Number(data.amount))) {
-        throw new Error('下单金额必须为数字');
+        throw new Error('Số tiền đặt lệnh phải là số');
       }
     } else if (data.orderAmountMode === 'Random') {
       if (!data.maxAmount || !data.minAmount) {
-        throw new Error('下单金额范围不能为空');
+        throw new Error('Phạm vi số tiền đặt lệnh không được để trống');
       }
       if (isNaN(Number(data.maxAmount)) || isNaN(Number(data.minAmount))) {
-        throw new Error('下单金额范围必须为数字');
+        throw new Error('Phạm vi số tiền đặt lệnh phải là số');
       }
       if (Number(data.maxAmount) < Number(data.minAmount)) {
-        throw new Error('下单金额范围错误');
+        throw new Error('Phạm vi số tiền đặt lệnh không hợp lệ');
       }
     } else {
-      throw new Error('下单金额模式错误');
+      throw new Error('Chế độ số tiền đặt lệnh không hợp lệ');
     }
 
     const runNum = setting['runNum'];
@@ -101,13 +101,13 @@ export const OrderMode = ({
     data['maxSleep'] = setting['maxSleep'] || '5';
 
     if (Number(data['maxSleep']) <= Number(data['minSleep'])) {
-      throw new Error('最大延迟时间不能小于最小延迟时间');
+      throw new Error('Thời gian trễ tối đa không thể nhỏ hơn thời gian trễ tối thiểu');
     }
 
     if (data['runType'] === 'sum' && !data['runNum']) {
-      throw new Error('请输入运行次数');
+      throw new Error('Vui lòng nhập số lần chạy');
     } else if (data['runType'] === 'price' && !data['runPrice']) {
-      throw new Error('请输入运行价格');
+      throw new Error('Vui lòng nhập mức giá chạy');
     }
 
     return data;
@@ -341,14 +341,14 @@ export const OrderMode = ({
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="count" className="w-28 flex-none">
-          保守设置(检测价格波动次数)
+          Cài đặt bảo thủ (số lần kiểm tra biến động giá)
         </Label>
         <Input
           type="text"
           name="count"
           id="count"
           disabled={runing}
-          placeholder="保守设置(检测价格波动次数)"
+          placeholder="Số lần kiểm tra biến động giá"
           defaultValue={orderSetting.count ?? '3'}
           onChange={e => orderSettingStorage.setVal({ count: e.target.value ?? '' })}
         />
@@ -356,21 +356,21 @@ export const OrderMode = ({
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="timeout" className="w-28 flex-none">
-          挂单超时(秒)
+          Timeout đặt lệnh (giây)
         </Label>
         <Input
           type="text"
           name="timeout"
           id="timeout"
           disabled={runing}
-          placeholder={`挂单超时`}
+          placeholder={`Timeout đặt lệnh`}
           defaultValue={orderSetting.timeout ?? '3'}
           onChange={e => orderSettingStorage.setVal({ timeout: e.target.value ?? '' })}
         />
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
-        <Label className="w-28 flex-none">下单金额模式</Label>
+        <Label className="w-28 flex-none">Chế độ số tiền đặt lệnh</Label>
         <RadioGroup
           name="orderAmountMode"
           disabled={runing}
@@ -380,13 +380,13 @@ export const OrderMode = ({
           <div className="flex items-center">
             <RadioGroupItem value="Fixed" id="Fixed" />
             <Label htmlFor="Fixed" className="pl-2 text-xs">
-              固定
+              Cố định
             </Label>
           </div>
           <div className="flex items-center">
             <RadioGroupItem value="Random" id="Random" />
             <Label htmlFor="Random" className="pl-2 text-xs text-red-500">
-              随机
+              Ngẫu nhiên
             </Label>
           </div>
         </RadioGroup>
@@ -398,7 +398,7 @@ export const OrderMode = ({
           orderSetting.orderAmountMode === 'Random' ? 'hidden' : '',
         )}>
         <Label htmlFor="amount" className="w-28 flex-none">
-          下单金额(每次操作金额{'(USDT)'})
+          Số tiền đặt lệnh (mỗi thao tác {'(USDT)'})
         </Label>
         <Input
           autoComplete="off"
@@ -409,7 +409,7 @@ export const OrderMode = ({
           type="text"
           name="amount"
           id="amount"
-          placeholder={`下单金额(每次操作金额(USDT))`}
+          placeholder={`Số tiền đặt lệnh (USDT)`}
           defaultValue={orderSetting.amount ?? ''}
           onChange={e => orderSettingStorage.setVal({ amount: e.target.value ?? '' })}
         />
@@ -420,7 +420,7 @@ export const OrderMode = ({
           'flex w-full max-w-sm items-center justify-between gap-3',
           orderSetting.orderAmountMode === 'Fixed' ? 'hidden' : '',
         )}>
-        <Label className="w-28 flex-none">下单金额(每次操作金额{'(USDT)'})</Label>
+        <Label className="w-28 flex-none">Số tiền đặt lệnh (mỗi thao tác {'(USDT)'})</Label>
         <div className="flex min-w-0 flex-1 items-center gap-2">
           <Input
             autoComplete="off"
@@ -431,7 +431,7 @@ export const OrderMode = ({
             type="text"
             name="minAmount"
             id="minAmount"
-            placeholder={`最小金额`}
+            placeholder={`Số tiền tối thiểu`}
             defaultValue={orderSetting.minAmount ?? '50'}
             onChange={e => orderSettingStorage.setVal({ minAmount: e.target.value ?? '' })}
           />
@@ -445,7 +445,7 @@ export const OrderMode = ({
             type="text"
             name="maxAmount"
             id="maxAmount"
-            placeholder={`最大金额`}
+            placeholder={`Số tiền tối đa`}
             defaultValue={orderSetting.maxAmount ?? '100'}
             onChange={e => orderSettingStorage.setVal({ maxAmount: e.target.value ?? '' })}
           />
@@ -454,7 +454,7 @@ export const OrderMode = ({
 
       <div>
         <Button className="w-full" type="submit" disabled={!startBalance}>
-          {runing ? '终止' : '执行'}
+          {runing ? 'Dừng' : 'Bắt đầu'}
         </Button>
       </div>
     </form>

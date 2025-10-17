@@ -74,11 +74,11 @@ const Popup = () => {
     file.onchange = async e => {
       const target = e.target as HTMLInputElement;
       const input = target.files;
-      if (!input?.length) return alert('请选择图片文件');
+      if (!input?.length) return alert('Vui lòng chọn file ảnh');
       const inputFile = input[0];
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
-      if (!ctx) return alert('请使用chrome浏览器打开');
+      if (!ctx) return alert('Vui lòng mở bằng trình duyệt Chrome');
       const img = new Image();
       img.src = URL.createObjectURL(inputFile);
       img.onload = () => {
@@ -88,14 +88,15 @@ const Popup = () => {
         try {
           const imageData = ctx.getImageData(0, 0, img.width, img.height);
           const data = jsqr(imageData.data, imageData.width, imageData.height);
-          if (!data?.data) throw new Error('二维码内容错误，请重新扫描');
+          if (!data?.data) throw new Error('Nội dung QR không hợp lệ, vui lòng quét lại');
           const results = parseMigrationQRCode(data.data);
-          if (!results.length || results.length > 1) throw new Error('请导入正确的二维码，不要导入多条');
+          if (!results.length || results.length > 1)
+            throw new Error('Vui lòng nhập đúng QR code, không được nhập nhiều');
           const { secretBytes } = results[0];
-          if (!secretBytes) throw new Error('二维码内容错误，请重新扫描');
+          if (!secretBytes) throw new Error('Nội dung QR không hợp lệ, vui lòng quét lại');
           const secret = base32Encode(secretBytes);
           settingStorage.setVal({ secret });
-          alert('导入成功');
+          alert('Nhập khẩu thành công');
         } catch (error: any) {
           alert(error.message);
         }
@@ -130,12 +131,12 @@ const Popup = () => {
         const balance = await getBalance(tab);
         setStartBalance(balance);
         setCurrentBalance(balance);
-        appendLog(`获取余额成功: ${balance}`, 'success');
+        appendLog(`Lấy số dư thành công: ${balance}`, 'success');
       } catch (error) {
         if (error instanceof Error) {
           appendLog(error.message, 'error');
         }
-        appendLog(`获取余额失败，请确认是否进入正确页面后再开始操作`, 'error');
+        appendLog(`Lấy số dư thất bại, vui lòng xác nhận đã vào trang đúng trước khi bắt đầu`, 'error');
       }
     })(setStartBalance, setCurrentBalance, appendLog);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -150,12 +151,12 @@ const Popup = () => {
               target="_blank"
               href="https://github.com/tetap/binance-alpha-auto-chrome-extensions"
               className="text-purple-600 hover:text-purple-800">
-              当前版本: v{chrome.runtime.getManifest().version}
+              Phiên bản hiện tại: v{chrome.runtime.getManifest().version}
             </a>
 
             {updateInfo.update && (
               <a target="_blank" href={updateInfo.url} className="text-purple-600 hover:text-purple-800">
-                发现新版本: {updateInfo.version}
+                Phát hiện phiên bản mới: {updateInfo.version}
               </a>
             )}
           </div>
@@ -163,31 +164,31 @@ const Popup = () => {
           <div className="mb-2 text-xs">
             <div>
               <div>
-                当日积分交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
+                Điểm giao dịch hôm nay:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
               </div>
               <div>
-                当日交易额:<b className={cn('ml-2 text-sm text-green-500')}> {todayNoMulDeal}</b>
+                Tổng giao dịch hôm nay:<b className={cn('ml-2 text-sm text-green-500')}> {todayNoMulDeal}</b>
               </div>
             </div>
             <div>
-              操作损耗:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
+              Chi phí thao tác:<b className={cn('ml-2 text-sm', op > 0 ? 'text-green-500' : 'text-red-500')}> {op}</b>
             </div>
           </div>
 
           <div className="bg-background mb-4 flex flex-col gap-2 rounded-md p-4 shadow-sm">
             <div className="flex items-center justify-between">
               <div className="w-1/2 text-xs">
-                开始余额: <b className="text-sm">{startBalance}</b>
+                Số dư ban đầu: <b className="text-sm">{startBalance}</b>
               </div>
               <div className="w-1/2 text-xs">
-                当前余额: <b className="text-sm">{currentBalance}</b>
+                Số dư hiện tại: <b className="text-sm">{currentBalance}</b>
               </div>
             </div>
           </div>
 
           <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
             <Label htmlFor="secret" className="w-28 flex-none">
-              二次验证(secret)
+              Xác thực 2 lớp (secret)
             </Label>
             <div className="relative w-full">
               <Input
@@ -195,7 +196,7 @@ const Popup = () => {
                 name="secret"
                 id="secret"
                 className="pr-8"
-                placeholder="自动过验证码 需要开启二次验证"
+                placeholder="Tự động điền mã, cần bật xác thực 2 lớp"
                 defaultValue={setting.secret ?? ''}
                 disabled={runing}
                 onChange={e => settingStorage.setVal({ secret: e.target.value ?? '' })}
@@ -213,7 +214,7 @@ const Popup = () => {
 
           <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
             <Label htmlFor="api" className="w-28 flex-none">
-              API地址
+              Địa chỉ API
             </Label>
             <Input
               name="api"
@@ -227,7 +228,7 @@ const Popup = () => {
 
           <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
             <Label htmlFor="runNum" className="w-28 flex-none">
-              上限方式
+              Hạn mức
             </Label>
             <RadioGroup
               disabled={runing}
@@ -236,11 +237,11 @@ const Popup = () => {
               onValueChange={value => settingStorage.setVal({ runType: value as 'sum' | 'price' })}>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="sum" id="sum" />
-                <Label htmlFor="sum">按次数运行</Label>
+                <Label htmlFor="sum">Chạy theo số lần</Label>
               </div>
               <div className="flex items-center gap-2">
                 <RadioGroupItem value="price" id="price" />
-                <Label htmlFor="price">按积分交易额运行</Label>
+                <Label htmlFor="price">Chạy theo tổng điểm giao dịch</Label>
               </div>
             </RadioGroup>
           </div>
@@ -248,7 +249,7 @@ const Popup = () => {
           {setting.runType === 'sum' ? (
             <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
               <Label htmlFor="runNum" className="w-28 flex-none">
-                操作次数
+                Số lần thực hiện
               </Label>
               <Input
                 disabled={runing}
@@ -256,7 +257,7 @@ const Popup = () => {
                 type="text"
                 name="runNum"
                 id="runNum"
-                placeholder={`操作次数`}
+                placeholder={`Số lần thực hiện`}
                 defaultValue={setting.runNum ?? '1'}
                 onChange={e => settingStorage.setVal({ runNum: e.target.value ?? '' })}
               />
@@ -264,7 +265,7 @@ const Popup = () => {
           ) : (
             <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
               <Label htmlFor="runPrice" className="w-28 flex-none">
-                操作金额(USDT)
+                Số tiền (USDT)
               </Label>
               <Input
                 disabled={runing}
@@ -281,7 +282,7 @@ const Popup = () => {
 
           <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
             <Label htmlFor="runNum" className="w-28 flex-none">
-              随机延迟(s)
+              Độ trễ ngẫu nhiên (s)
             </Label>
             <div className="flex min-w-0 flex-1 items-center gap-2">
               <Input
@@ -322,10 +323,10 @@ const Popup = () => {
                 onValueChange={value => settingStorage.setVal({ mode: value as 'Reverse' | 'Order' })}>
                 <TabsList>
                   <TabsTrigger disabled={runing} value="Reverse">
-                    反向订单
+                    Lệnh đảo chiều
                   </TabsTrigger>
                   <TabsTrigger disabled={runing} value="Order">
-                    限价单
+                    Lệnh giới hạn
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="Reverse">
@@ -359,9 +360,9 @@ const Popup = () => {
 
         <div className="flex h-96 w-full flex-col gap-2 pb-4">
           <div className="flex flex-none items-center justify-between text-sm font-bold">
-            <div>日志输出</div>
+            <div>Log</div>
             <Button variant={'outline'} onClick={clearLogger}>
-              清空日志
+              Xóa log
             </Button>
           </div>
           {render}

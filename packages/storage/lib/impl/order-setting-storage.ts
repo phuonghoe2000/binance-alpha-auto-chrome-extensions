@@ -8,13 +8,13 @@ export type OrderSettingState = {
   timeout: string;
   runNum: string;
   count: string;
-  // 卖出超时次数(超出次数将以最佳价格卖出止损)
+  // Số lần quá hạn bán ra (vượt quá sẽ bán cắt lỗ ở giá tốt nhất)
   timeoutCount: string;
-  // 下单金额模式 固定金额 随机金额
+  // Chế độ số tiền đặt lệnh: cố định hoặc ngẫu nhiên
   orderAmountMode: 'Fixed' | 'Random';
-  // 最高随机金额
+  // Số tiền ngẫu nhiên tối đa
   maxAmount: string;
-  // 最低随机金额
+  // Số tiền ngẫu nhiên tối thiểu
   minAmount: string;
 };
 

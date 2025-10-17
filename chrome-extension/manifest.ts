@@ -37,7 +37,7 @@ const manifest = {
     type: 'module',
   },
   action: {
-    default_title: '点击打开插件',
+    default_title: 'Nhấn để mở tiện ích',
     default_icon: 'icon-34.png',
   },
   side_panel: {

@@ -126,6 +126,7 @@ export const jumpToBuy = async (tab: chrome.tabs.Tab) =>
 
 export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
+  price = price.replace('.', ',');
   return await callChromeJs(tab, [price], async price => {
     try {
       const setValue = (selector: string | HTMLInputElement, value: string) => {
@@ -336,15 +337,39 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       };
+<<<<<<< HEAD
       setValue('input#limitPrice', checkPrice);
+=======
+      setValue('input#limitPrice', sellPrice.replace('.', ','));
+>>>>>>> 255e727 (Fix sell back with wrong set value)
       await new Promise(resolve => setTimeout(resolve, 16));
       setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
       const input = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
       ) as HTMLInputElement;
-      if (!input) throw new Error('Không tìm thấy ô nhập số lượng, hãy làm mới trang và kiểm tra trang có chính xác không');
-      if (Number(input.value) >= 1) return { error: '', val: true };
+      if (!input)
+        throw new Error('Không tìm thấy ô nhập số lượng, hãy làm mới trang và kiểm tra trang có chính xác không');
+
+      const parseLocaleNumber = (s: string) => {
+        if (s == null) return NaN;
+        let v = String(s).trim();
+        // If both dot and comma present, assume dot is thousand separator and comma is decimal
+        if (v.indexOf('.') !== -1 && v.indexOf(',') !== -1) {
+          v = v.replace(/\./g, '').replace(',', '.');
+        } else if (v.indexOf(',') !== -1) {
+          // Only comma present -> treat comma as decimal separator
+          v = v.replace(',', '.');
+        }
+        // Remove any non numeric characters except decimal point, sign and exponent
+        v = v.replace(/[^0-9.\-+eE]/g, '');
+        const n = Number(v);
+        return isFinite(n) ? n : NaN;
+      };
+
+      const numeric = parseLocaleNumber(input.value);
+      if (!isFinite(numeric)) return { error: '', val: false };
+      if (numeric >= 1) return { error: '', val: true };
       return { error: '', val: false };
     } catch (error: any) {
       return { error: error.message, val: true };
@@ -377,10 +402,13 @@ export const backSell = async (
       if (!price) throw new Error('Không thể lấy giá');
       // const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
       const sellPrice = (Number(price) - Number(price) * 0.00006).toString();
+      console.log('Đóng lệnh đảo chiều');
       await closeReverseOrder(tab); // Đóng lệnh đảo chiều
       // Thiết lập giá bán
+      console.log('Thiết lập giá bán');
       await setPrice(tab, sellPrice);
       // Thiết lập số lượng bán
+      console.log('Thiết lập số lượng bán');
       await setRangeValue(tab, '100');
       // Thực hiện bán
       await callSubmit(tab);
@@ -607,10 +635,12 @@ export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
   });
 export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
+  price = price.replace('.', ',');
   return await callChromeJs(tab, [price], async price => {
     try {
       const limitTotals = document.querySelectorAll('input#limitTotal');
-      if (!limitTotals.length || limitTotals.length < 2) throw new Error('Không tìm thấy phần tử giá đảo chiều, hãy kiểm tra trang có chính xác không');
+      if (!limitTotals.length || limitTotals.length < 2)
+        throw new Error('Không tìm thấy phần tử giá đảo chiều, hãy kiểm tra trang có chính xác không');
       const limitTotal = limitTotals[1] as any;
       const setValue = (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;

@@ -7,15 +7,15 @@ export type BicycleSettingState = {
   amount: string;
   runNum: string;
   count: string;
-  // 下单金额模式 固定金额 随机金额
+  // Chế độ số tiền đặt lệnh: cố định hoặc ngẫu nhiên
   orderAmountMode: 'Fixed' | 'Random';
-  // 最高随机金额
+  // Số tiền ngẫu nhiên tối đa
   maxAmount: string;
-  // 最低随机金额
+  // Số tiền ngẫu nhiên tối thiểu
   minAmount: string;
-  // 检查价格时间
+  // Thời gian kiểm tra giá
   checkPriceTime: string;
-  // 检查次数
+  // Số lần kiểm tra
   checkPriceCount: string;
 };
 

@@ -18,7 +18,7 @@ export interface AlphaKlineResponse {
 export interface MarketStabilityResult {
   symbol: string;
   stable: boolean; // Có thể cày điểm hay không
-  trend: 'Xu hướng tăng' | 'Xu hướng giảm' | 'Đi ngang';
+  trend: 'uptrend' | 'downtrend' | 'sideways';
   message: string; // Thông báo dễ đọc
 }
 
@@ -181,7 +181,7 @@ export const checkMarketStable = async (
     (v: boolean) => v,
   ).length;
 
-  const trend = trueCount >= options.upThreshold ? 'Xu hướng tăng' : 'Xu hướng giảm';
+  const trend = trueCount >= options.upThreshold ? 'uptrend' : 'downtrend';
 
   const message = stable
     ? `✅ Có thể giao dịch (Kiểm tra độ dốc xu hướng tuyến tính: ${a.TrendSlope}; Kiểm tra đà tăng liên tục: ${a.Momentum}; Chênh lệch hướng MA ngắn hạn và dài hạn: ${a.ShortVsLong}; Đột phá sau hội tụ biến động: ${a.VolatilityBreak}; Kiểm tra gia tốc tức thời: ${a.Acceleration})`

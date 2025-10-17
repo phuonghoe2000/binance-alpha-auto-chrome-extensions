@@ -96,7 +96,8 @@ const Popup = () => {
           const data = jsqr(imageData.data, imageData.width, imageData.height);
           if (!data?.data) throw new Error('Nội dung mã QR không hợp lệ, vui lòng quét lại');
           const results = parseMigrationQRCode(data.data);
-          if (!results.length || results.length > 1) throw new Error('Vui lòng nhập mã QR chính xác, đừng nhập nhiều mục');
+          if (!results.length || results.length > 1)
+            throw new Error('Vui lòng nhập mã QR chính xác, đừng nhập nhiều mục');
           const { secretBytes } = results[0];
           if (!secretBytes) throw new Error('Nội dung mã QR không hợp lệ, vui lòng quét lại');
           const secret = base32Encode(secretBytes);
@@ -170,7 +171,8 @@ const Popup = () => {
           <div className="mb-2 text-xs">
             <div>
               <div>
-                Khối lượng giao dịch tính điểm trong ngày:<b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
+                Khối lượng giao dịch tính điểm trong ngày:
+                <b className={cn('ml-2 text-sm text-green-500')}> {todayDeal}</b>
               </div>
               <div>
                 Khối lượng giao dịch trong ngày:<b className={cn('ml-2 text-sm text-green-500')}> {todayNoMulDeal}</b>
@@ -396,7 +398,8 @@ const Popup = () => {
                   />
                 </div>
                 <div className="text-xs">
-                  💹: Độ dốc xu hướng tuyến tính; đặt 0 nghĩa là vẫn giao dịch khi đi ngang. Đây là độ cong, thường chỉ cần chỉnh chữ số thập phân cuối, ví dụ 0.000003 để đánh giá xu hướng tăng chặt chẽ hơn
+                  💹: Độ dốc xu hướng tuyến tính; đặt 0 nghĩa là vẫn giao dịch khi sideways. Đây là độ cong, thường chỉ
+                  cần chỉnh chữ số thập phân cuối, ví dụ 0.000003 để đánh giá xu hướng tăng chặt chẽ hơn
                 </div>
               </div>
 
@@ -441,7 +444,8 @@ const Popup = () => {
                   </div>
                 </div>
                 <div className="text-xs">
-                  💹: Tham số 1: chu kỳ MA ngắn hạn phản ánh biến động giá gần đây; tham số 2: chu kỳ MA dài hạn phản ánh xu hướng tổng thể
+                  💹: Tham số 1: chu kỳ MA ngắn hạn phản ánh biến động giá gần đây; tham số 2: chu kỳ MA dài hạn phản
+                  ánh xu hướng tổng thể
                 </div>
               </div>
             </CollapsibleContent>

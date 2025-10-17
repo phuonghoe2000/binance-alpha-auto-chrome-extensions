@@ -254,8 +254,8 @@ export const OrderMode = ({
 
         appendLog(`Đã lấy giá mua: ${buyPrice}`, 'info');
 
-        buyPrice = stable.trend === 'Xu hướng tăng' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // Điều chỉnh giá mua
-        // buyPrice = stable.trend === 'Xu hướng tăng' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // Điều chỉnh giá mua
+        buyPrice = stable.trend === 'uptrend' ? (Number(buyPrice) + Number(buyPrice) * 0.001).toString() : buyPrice; // Điều chỉnh giá mua
+        // buyPrice = stable.trend === 'uptrend' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice; // Điều chỉnh giá mua
         // Đóng lệnh đảo chiều
         await closeReverseOrder(tab);
         // Điền giá mua

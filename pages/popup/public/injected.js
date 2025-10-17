@@ -1,9 +1,9 @@
 (function () {
-  console.log('content script - 注入');
+  console.log('content script - Đã tiêm');
 
   window.setValue = (selector, value) => {
     const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
-    if (!input) throw new Error('input元素不存在');
+    if (!input) throw new Error('Phần tử input không tồn tại');
     // eslint-disable-next-line no-undef
     const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value').set;
     nativeInputValueSetter.call(input, value);
@@ -13,15 +13,15 @@
     input.dispatchEvent(new Event('change', { bubbles: true }));
   };
 
-  // 改写 WebAuthn API
+  // Ghi đè API WebAuthn
   Object.defineProperty(navigator, 'credentials', {
     value: {
       get: async () => {
-        console.warn('WebAuthn 已被扩展禁用');
+        console.warn('WebAuthn đã bị tiện ích vô hiệu hóa');
         throw new DOMException('WebAuthn disabled by extension', 'NotAllowedError');
       },
       create: async () => {
-        console.warn('WebAuthn 注册已被扩展禁用');
+        console.warn('Đăng ký WebAuthn đã bị tiện ích vô hiệu hóa');
         throw new DOMException('WebAuthn disabled by extension', 'NotAllowedError');
       },
     },

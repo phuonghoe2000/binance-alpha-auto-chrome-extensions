@@ -3,41 +3,41 @@
       <img alt="Logo" src="./docs/app.png" />
   </picture>
 
-## 🚀 邀请链接 [点击直达](https://accounts.maxweb.black/register?ref=TETAP)
+## 🚀 Liên kết mời [Nhấn để đi đến](https://accounts.maxweb.black/register?ref=TETAP)
 
-## 项目介绍
+## Giới thiệu dự án
 
-一个基于 Chrome 扩展的 Binance Alpha 交易工具。
+Một công cụ giao dịch Binance Alpha dựa trên tiện ích mở rộng Chrome.
 
 </div>
 
 
-## 更多版本
+## Các phiên bản khác
 
 Android - [Github](https://github.com/tetap/binance-alpha-auto-android)
 
 Chrome Extension - [Github](https://github.com/tetap/binance-alpha-auto-chrome-extensions)
 
-## 功能特点
+## Tính năng nổi bật
 
-- **自动交易流水**：通过策略化操作快速执行交易，优化账户流水管理。
-- **奖励/积分优化**：结合流水策略，智能提升奖励或积分积累效率。
-- **反向与精度订单**：支持设置小数点保留位及反向价格策略，安全生成交易订单。
-- **价格波动检测**：连续跟踪市场价格，支持保守模式，降低异常波动风险。
-- **日志输出**：实时记录每轮交易操作及结果，方便分析交易效果。
-- **操作损耗统计**：显示每轮操作对账户余额及资金使用的影响。
-- **多轮策略支持**：可设置循环次数，一键执行多轮交易策略。
+- **Tự động ghi nhận giao dịch**: Thực thi giao dịch nhanh bằng thao tác theo chiến lược, tối ưu việc quản lý dòng tiền.
+- **Tối ưu thưởng/điểm**: Kết hợp chiến lược dòng tiền để nâng cao hiệu quả tích lũy thưởng hoặc điểm một cách thông minh.
+- **Lệnh đảo chiều và độ chính xác cao**: Hỗ trợ thiết lập số chữ số thập phân và chiến lược giá đảo chiều, tạo lệnh giao dịch an toàn.
+- **Phát hiện biến động giá**: Theo dõi giá thị trường liên tục, hỗ trợ chế độ thận trọng nhằm giảm rủi ro từ biến động bất thường.
+- **Xuất nhật ký**: Ghi lại thời gian thực từng vòng giao dịch và kết quả, thuận tiện phân tích hiệu quả giao dịch.
+- **Thống kê hao hụt thao tác**: Hiển thị ảnh hưởng của mỗi vòng thao tác lên số dư và việc sử dụng vốn.
+- **Hỗ trợ chiến lược nhiều vòng**: Có thể đặt số lần lặp và thực thi chiến lược giao dịch nhiều vòng chỉ với một lần bấm.
 
 
-## 详细说明
-[点击查看](https://jcna3m5r8klj.feishu.cn/drive/folder/OUNgfvBnKlZtqBd84wCc356ynDd?from=from_copylink)
+## Thông tin chi tiết
+[Nhấn để xem](https://jcna3m5r8klj.feishu.cn/drive/folder/OUNgfvBnKlZtqBd84wCc356ynDd?from=from_copylink)
 
-## 💰 赞助支持
+## 💰 Tài trợ hỗ trợ
 
-您的每一份支持都是我们前进的动力
-一杯Coffee的微信赞赏
+Mỗi sự ủng hộ của bạn đều là động lực để chúng tôi tiến về phía trước.
+Ủng hộ qua WeChat bằng một ly cà phê.
 
-感谢所有的支持者，得到你们的支持我将会更加完善开源库的能力！ 🚀
+Cảm ơn tất cả những người đã ủng hộ. Nhờ sự hỗ trợ của các bạn mà tôi sẽ càng hoàn thiện thư viện mã nguồn mở này! 🚀
 
 <picture>
     <img alt="Logo" src="./docs/wechat.jpg" />

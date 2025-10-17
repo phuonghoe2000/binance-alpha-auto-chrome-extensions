@@ -1,6 +1,6 @@
 import 'webextension-polyfill';
 
 chrome.action.onClicked.addListener(async tab => {
-  // 将 side panel 与当前 tab 绑定，并显示
+  // Gắn bảng bên với thẻ hiện tại và hiển thị
   await chrome.sidePanel.open({ tabId: tab.id! });
 });

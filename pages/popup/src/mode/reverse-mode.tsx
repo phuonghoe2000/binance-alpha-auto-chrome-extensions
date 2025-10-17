@@ -265,7 +265,7 @@ export const ReverseMode = ({
         //     : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
 
         const submitPrice =
-          stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
+          stable.trend === 'uptrend' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
 
         // 操作写入买入价格
         await setPrice(tab, submitPrice);

@@ -1,11 +1,11 @@
 {
   "extensionDescription": {
     "description": "Extension description",
-    "message": "Trợ lý Binance Alpha"
+    "message": "Trợ lý Binance Alpha test"
   },
   "extensionName": {
     "description": "Extension name",
-    "message": "Trợ lý Binance Alpha"
+    "message": "Trợ lý Binance Alpha test"
   },
   "toggleTheme": {
     "message": "Toggle theme"

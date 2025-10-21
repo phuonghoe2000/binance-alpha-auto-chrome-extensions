@@ -63,6 +63,7 @@ export const ReverseMode = ({
       maxSleep: string;
       minDiscount: string;
       maxDiscount: string;
+      buyPriceIncrease: string;
     };
 
     if (!data.timeout || !data.count || !data.minDiscount || !data.maxDiscount) {
@@ -240,6 +241,15 @@ export const ReverseMode = ({
           appendLog(stable.message, 'success');
         }
 
+        // Chỉ đặt lệnh khi uptrend hoặc sideway
+        if (stable.trend !== 'uptrend') {
+          appendLog('Không phải xu hướng tăng, không đặt lệnh', 'info');
+          // Đợi 1 giây nhỏ trước khi next loop để tránh vòng lặp quá nhanh
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          i--;
+          continue;
+        }
+
         // 开启反向订单
         await openReverseOrder(tab);
         let buyPrice = await getPrice(symbol, api);
@@ -264,12 +274,23 @@ export const ReverseMode = ({
         //     ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
         //     : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
 
-        const submitPrice =
-          stable.trend === 'uptrend' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
+        // Với uptrend: đặt giá mua cao hơn theo tỷ lệ cấu hình, giá bán cũng cao hơn
+        // Với sideways: không đặt lệnh để tránh rủi ro
+        if (stable.trend !== 'uptrend') {
+          appendLog('Không phải xu hướng tăng, không đặt lệnh', 'info');
+          // Đợi 1 giây nhỏ trước khi next loop để tránh vòng lặp quá nhanh
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          i--;
+          continue;
+        }
 
-        // 操作写入买入价格
+        // Uptrend: đặt giá mua cao hơn theo % được cấu hình
+        const buyPriceIncrease = Number(options.buyPriceIncrease || '0.01'); // default 0.01%
+        const submitPrice = (Number(buyPrice) * (1 + buyPriceIncrease / 100)).toString();
+
+        // Ghi giá mua
         await setPrice(tab, submitPrice);
-        // 计算买入金额
+        // Tính tiền mua
         const amount =
           options.orderAmountMode === 'Fixed'
             ? options.amount
@@ -280,19 +301,15 @@ export const ReverseMode = ({
         // Thiết lập số tiền mua
         await setLimitTotal(tab, amount);
 
-        // // Giả định giá lệnh đảo chiều
-        // const num = parseFloat(buyPrice);
-        // // Giữ lại số chữ số thập phân theo tham số dot
-        // const basic = 1 * 10 ** Number(options.dot);
-        // const truncated = Math.floor(num * basic) / basic;
-
         const discount = floor(
           (Number(options.maxDiscount) - Number(options.minDiscount)) * Math.random() + Number(options.minDiscount),
           6,
         );
 
-        // Giá bán
-        const truncated = (Number(buyPrice) * (1 - discount / 100)).toString();
+        // Giá bán theo trend (luôn là uptrend vì đã check ở trên)
+        appendLog(`trend: ${stable.trend}`, 'info');
+        // Bán cao hơn mua theo tỷ lệ discount
+        const truncated = (Number(buyPrice) * (1 + discount / 100)).toString();
 
         // Thiết lập giá lệnh đảo chiều
         await setReversePrice(tab, truncated.toString());
@@ -300,17 +317,23 @@ export const ReverseMode = ({
         await callSubmit(tab);
         // Kiểm tra có xuất hiện mã xác thực hay không
         const isAuth = await isAuthModal(tab);
-        // Nếu xuất hiện hộp thoại xác thực thì chờ
+        // Nếu xuất hiện hộp thoại xác thực thì refresh trang và chờ 1 tiếng
         if (isAuth) {
-          appendLog('Xuất hiện mã xác thực, chờ xác minh', 'info');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          appendLog('Xuất hiện mã xác thực, refresh trang và chờ 1 tiếng', 'info');
+          if (tab.id) {
+            await chrome.tabs.reload(tab.id);
+          }
+          await new Promise(resolve => setTimeout(resolve, 3600000)); // chờ 1 tiếng (3600000ms)
+          if (tab.id) {
+            await chrome.tabs.reload(tab.id);
+          }
         }
         // 等待订单完成
         BuyOk = await waitBuyOrder(tab, timeout);
 
         BuyOk = !(await waitSellOrder(tab, timeout));
 
-        appendLog(`Đặt lệnh thành công: Giá: ${buyPrice} Số tiền: ${amount}`, 'success');
+        appendLog(`Đặt lệnh thành công: Giá mua ${buyPrice} Giá bán: ${truncated} Số tiền: ${amount}`, 'success');
 
         const day = dayjs().utc().format('YYYY-MM-DD');
 
@@ -386,6 +409,25 @@ export const ReverseMode = ({
           onChange={e => settingStorage.setVal({ dot: e.target.value ?? '' })}
         />
       </div> */}
+
+      <div className="flex w-full max-w-sm items-center justify-between gap-3">
+        <Label htmlFor="buyPriceIncrease" className="w-28 flex-none">
+          Tăng giá mua khi uptrend (%)
+        </Label>
+        <Input
+          autoComplete="off"
+          autoCorrect="off"
+          autoCapitalize="off"
+          disabled={runing}
+          spellCheck={false}
+          type="text"
+          name="buyPriceIncrease"
+          id="buyPriceIncrease"
+          placeholder="Tăng giá mua khi uptrend (%)"
+          defaultValue={setting.buyPriceIncrease ?? '0.01'}
+          onChange={e => settingStorage.setVal({ buyPriceIncrease: e.target.value ?? '' })}
+        />
+      </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label className="w-28 flex-none">Chiết khấu lệnh đảo chiều (%)</Label>

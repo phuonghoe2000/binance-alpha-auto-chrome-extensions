@@ -183,9 +183,7 @@ export const checkMarketStable = async (
 
   const trend = trueCount >= options.upThreshold ? 'uptrend' : 'downtrend';
 
-  const message = stable
-    ? `✅ Có thể giao dịch (Kiểm tra độ dốc xu hướng tuyến tính: ${a.TrendSlope}; Kiểm tra đà tăng liên tục: ${a.Momentum}; Chênh lệch hướng MA ngắn hạn và dài hạn: ${a.ShortVsLong}; Đột phá sau hội tụ biến động: ${a.VolatilityBreak}; Kiểm tra gia tốc tức thời: ${a.Acceleration})`
-    : `❌ Không thể giao dịch (Kiểm tra độ dốc xu hướng tuyến tính: ${a.TrendSlope}; Kiểm tra đà tăng liên tục: ${a.Momentum}; Chênh lệch hướng MA ngắn hạn và dài hạn: ${a.ShortVsLong}; Đột phá sau hội tụ biến động: ${a.VolatilityBreak}; Kiểm tra gia tốc tức thời: ${a.Acceleration})`;
+  const message = stable ? `✅ Có thể giao dịch` : `❌ Không thể giao dịch`;
 
   return {
     symbol,

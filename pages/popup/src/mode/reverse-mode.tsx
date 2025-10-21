@@ -292,7 +292,8 @@ export const ReverseMode = ({
         );
 
         // Giá bán
-        const truncated = (Number(buyPrice) * (1 - discount / 100)).toString();
+        appendLog(`trend: ${stable.trend}`, 'info');
+        const truncated = stable.trend === 'uptrend' ? (Number(buyPrice) * (1 - discount / 100)).toString() : buyPrice;
 
         // Thiết lập giá lệnh đảo chiều
         await setReversePrice(tab, truncated.toString());
@@ -303,14 +304,14 @@ export const ReverseMode = ({
         // Nếu xuất hiện hộp thoại xác thực thì chờ
         if (isAuth) {
           appendLog('Xuất hiện mã xác thực, chờ xác minh', 'info');
-          await new Promise(resolve => setTimeout(resolve, 3000));
+          await new Promise(resolve => setTimeout(resolve, 30000));
         }
         // 等待订单完成
         BuyOk = await waitBuyOrder(tab, timeout);
 
         BuyOk = !(await waitSellOrder(tab, timeout));
 
-        appendLog(`Đặt lệnh thành công: Giá: ${buyPrice} Số tiền: ${amount}`, 'success');
+        appendLog(`Đặt lệnh thành công: Giá mua ${buyPrice} Giá bán: ${truncated} Số tiền: ${amount}`, 'success');
 
         const day = dayjs().utc().format('YYYY-MM-DD');
 

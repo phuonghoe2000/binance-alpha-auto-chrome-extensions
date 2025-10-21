@@ -34,8 +34,13 @@ export type SettingState = {
 
   minDiscount: string;
   maxDiscount: string;
+<<<<<<< HEAD
   // 溢价率
   priceRatio: string;
+=======
+  // Tỷ lệ tăng giá mua khi uptrend (%)
+  buyPriceIncrease: string;
+>>>>>>> 0d2be6d (some change to reduce the discount)
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -66,8 +71,12 @@ const storage = createStorage<SettingState>(
 
     minDiscount: '0.2',
     maxDiscount: '0.5',
+<<<<<<< HEAD
 
     priceRatio: '0.5',
+=======
+    buyPriceIncrease: '0.01',
+>>>>>>> 0d2be6d (some change to reduce the discount)
   },
   {
     storageEnum: StorageEnum.Local,

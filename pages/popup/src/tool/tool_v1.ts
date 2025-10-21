@@ -459,7 +459,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
         input.dispatchEvent(new Event('input', { bubbles: true }));
         input.dispatchEvent(new Event('change', { bubbles: true }));
       };
-      setValue('input#limitPrice', sellPrice.replace('.', ','));
+      setValue('input#limitPrice', checkPrice.replace('.', ','));
       await new Promise(resolve => setTimeout(resolve, 16));
       await setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
@@ -532,9 +532,15 @@ export const backSell = async (
       await callSubmit(tab);
       // Kiểm tra có xuất hiện mã xác thực hay không
       const isAuth = await isAuthModal(tab);
+<<<<<<< HEAD
       // 出现验证弹窗等待
       if (isAuth) await new Promise(resolve => setTimeout(resolve, 10000));
       // 等待订单
+=======
+      // Nếu có hộp thoại xác thực thì chờ
+      if (isAuth) await new Promise(resolve => setTimeout(resolve, 30000));
+      // Chờ lệnh hoàn tất
+>>>>>>> 0d2be6d (some change to reduce the discount)
       await waitOrder(tab, timeout);
       safe = false;
       appendLog(`Bán thành công: Giá ${sellPrice}`, 'success');

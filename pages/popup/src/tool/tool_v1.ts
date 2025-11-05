@@ -509,6 +509,8 @@ export const backSell = async (
       const isSell = await getIsSell(tab, checkPrice);
       if (!isSell && safe) {
         appendLog('没有发现卖单数据，强制刷新', 'error');
+        await closeReverseOrder(tab); // Đóng lệnh đảo chiều
+        await new Promise(resolve => setTimeout(resolve, 3000));
         await chrome.tabs.reload(tab.id!);
         await new Promise(resolve => setTimeout(resolve, 5000));
         safe = false;
@@ -532,15 +534,9 @@ export const backSell = async (
       await callSubmit(tab);
       // Kiểm tra có xuất hiện mã xác thực hay không
       const isAuth = await isAuthModal(tab);
-<<<<<<< HEAD
-      // 出现验证弹窗等待
-      if (isAuth) await new Promise(resolve => setTimeout(resolve, 10000));
-      // 等待订单
-=======
       // Nếu có hộp thoại xác thực thì chờ
       if (isAuth) await new Promise(resolve => setTimeout(resolve, 30000));
       // Chờ lệnh hoàn tất
->>>>>>> 0d2be6d (some change to reduce the discount)
       await waitOrder(tab, timeout);
       safe = false;
       appendLog(`Bán thành công: Giá ${sellPrice}`, 'success');
@@ -831,6 +827,7 @@ export const waitSellOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =
             await window.dispatchMouseEvent(btn);
           });
           console.log('等待订单超时，等待重试');
+          await closeReverseOrder(tab); // Đóng lệnh đảo chiều
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '等待订单超时，等待重试', val: true };
         }

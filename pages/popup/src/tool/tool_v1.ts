@@ -594,6 +594,8 @@ export const backSell = async (
       const isSell = await getIsSell(tab, checkPrice);
       if (!isSell && safe) {
         appendLog('没有发现卖单数据，强制刷新', 'error');
+        await closeReverseOrder(tab); // Đóng lệnh đảo chiều
+        await new Promise(resolve => setTimeout(resolve, 3000));
         await chrome.tabs.reload(tab.id!);
         await new Promise(resolve => setTimeout(resolve, 5000));
         safe = false;
@@ -1001,6 +1003,7 @@ export const waitSellOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =
             order.parentNode?.parentNode?.querySelector('svg')?.dispatchEvent(evt);
           });
           console.log('等待订单超时，等待重试');
+          await closeReverseOrder(tab); // Đóng lệnh đảo chiều
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '等待订单超时，等待重试', val: true };
         }

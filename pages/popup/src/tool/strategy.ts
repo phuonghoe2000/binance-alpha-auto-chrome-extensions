@@ -29,7 +29,7 @@ export const extractClosePrices = (klines: string[][]) => klines.map(k => parseF
  * Thuật toán 1: Kiểm tra độ dốc xu hướng tuyến tính (phiên bản đơn giản của hồi quy tuyến tính)
  * Độ dốc của 20 giá đóng cửa gần nhất > 0 thì coi là xu hướng tăng rõ rệt
  */
-export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000002): boolean => {
+export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000004): boolean => {
   const data = extractClosePrices(klines);
   if (data.length < 5) return false;
   const n = data.length;
@@ -42,7 +42,8 @@ export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000002): boolea
     den += Math.pow(i - avgX, 2);
   }
   const slope = num / den;
-  console.log('Slope:', slope);
+  // Debug slope
+  // console.log('Slope:', slope);
 
   // Thêm điều kiện: giá hiện tại phải cao hơn giá trung bình
   const currentPrice = data[data.length - 1];
@@ -71,16 +72,16 @@ export const algo2_Momentum = (klines: string[][], confirm = 2): boolean => {
     }
   }
 
-  // Yêu cầu trung bình mỗi nến tăng ít nhất 0.01%
+  // Yêu cầu trung bình mỗi nến tăng ít nhất 0.02% (conservative)
   const avgIncrease = totalIncrease / confirm;
-  return count >= confirm && avgIncrease > 0.01; // Tăng liên tiếp và đủ biên độ
+  return count >= confirm && avgIncrease > 0.02; // Tăng liên tiếp và đủ biên độ
 };
 
 /**
  * Thuật toán 3: So sánh hướng đường trung bình ngắn hạn và dài hạn
  * Chênh lệch hướng > ngưỡng thể hiện xu hướng tăng tốc
  */
-export const algo3_ShortVsLong = (klines: string[][], short = 3, long = 10) => {
+export const algo3_ShortVsLong = (klines: string[][], short = 5, long = 20) => {
   const data = extractClosePrices(klines);
   if (data.length < long) return false;
   const ma = (arr: number[], n: number) => arr.slice(-n).reduce((a, b) => a + b, 0) / n;
@@ -96,31 +97,32 @@ export const algo3_ShortVsLong = (klines: string[][], short = 3, long = 10) => {
   // Tính khoảng cách % giữa 2 đường MA
   const maDistance = ((shortNow - longNow) / longNow) * 100;
 
-  // Yêu cầu:
+  // Yêu cầu (conservative):
   // 1. MA ngắn hạn tăng nhanh hơn MA dài hạn
   // 2. MA ngắn hạn đang tăng
-  // 3. Khoảng cách giữa 2 MA > 0.01%
-  return shortSlope > longSlope && shortSlope > 0 && maDistance > 0.01;
+  // 3. Khoảng cách giữa 2 MA > 0.05%
+  return shortSlope > longSlope && shortSlope > 0 && maDistance > 0.05;
 };
 
 /**
  * Thuật toán 4: Biến động hội tụ rồi bứt phá (sau giai đoạn biến động thấp)
  * Nếu biến động gần đây giảm và giá mới nhất vượt biên trên → tín hiệu mua
  */
-export const algo4_VolatilityBreak = (klines: string[][], lookback = 10) => {
+export const algo4_VolatilityBreak = (klines: string[][], lookback = 20) => {
   const data = extractClosePrices(klines);
   if (data.length < lookback) return false;
   const recent = data.slice(-lookback);
   const avg = recent.reduce((a, b) => a + b, 0) / lookback;
   const vol = Math.sqrt(recent.map(p => (p - avg) ** 2).reduce((a, b) => a + b, 0) / lookback);
 
-  // Giảm hệ số biên độ từ 1.2 xuống 1.1 để nhạy hơn
+  // Conservative: dùng lookback lớn hơn và multiplier 1.2
   const upper = avg + vol * 1.1;
   const curr = recent[recent.length - 1];
 
   // Thêm điều kiện: 2 giá gần nhất phải tăng
   const prev = recent[recent.length - 2];
-  const increasing = curr > prev;
+  const prev2 = recent[recent.length - 3] ?? prev;
+  const increasing = curr > prev && prev > prev2;
 
   return curr > upper && increasing;
 };
@@ -174,9 +176,9 @@ export const algo5_Acceleration = (klines: string[][]) => {
   const p2 = (a2 / data[data.length - 3]) * 100;
   const p3 = (a3 / data[data.length - 4]) * 100;
 
-  // Yêu cầu:
+  // Yêu cầu (conservative):
   // 1. Tốc độ tăng tăng dần
-  // 2. Biên độ tăng gần nhất > 0.01%
+  // 2. Biên độ tăng gần nhất > 0.02%
   // 3. Tất cả các biến động đều dương
   return a1 > a2 && a2 > a3 && p1 > 0.01 && p1 > 0 && p2 > 0 && p3 > 0;
 };
@@ -186,7 +188,7 @@ export const algo5_Acceleration = (klines: string[][]) => {
  */
 export const analyzeFast = (
   klines: string[][],
-  toSlope = 0.000003,
+  toSlope = 0.000004,
   confirm = 3,
   short = 5,
   long = 20,

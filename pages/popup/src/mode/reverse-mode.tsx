@@ -241,7 +241,7 @@ export const ReverseMode = ({
           appendLog(stable.message, 'success');
         }
 
-        // Chỉ đặt lệnh khi uptrend hoặc sideway
+        // Kiểm tra xu hướng: chỉ đặt lệnh khi uptrend
         if (stable.trend !== 'uptrend') {
           appendLog('Không phải xu hướng tăng, không đặt lệnh', 'info');
           // Đợi 1 giây nhỏ trước khi next loop để tránh vòng lặp quá nhanh
@@ -274,16 +274,6 @@ export const ReverseMode = ({
         //     ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
         //     : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
 
-        // Với uptrend: đặt giá mua cao hơn theo tỷ lệ cấu hình, giá bán cũng cao hơn
-        // Với sideways: không đặt lệnh để tránh rủi ro
-        if (stable.trend !== 'uptrend') {
-          appendLog('Không phải xu hướng tăng, không đặt lệnh', 'info');
-          // Đợi 1 giây nhỏ trước khi next loop để tránh vòng lặp quá nhanh
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          i--;
-          continue;
-        }
-
         // Uptrend: đặt giá mua cao hơn theo % được cấu hình
         const buyPriceIncrease = Number(options.buyPriceIncrease || '0.01'); // default 0.01%
         const submitPrice = (Number(buyPrice) * (1 + buyPriceIncrease / 100)).toString();
@@ -309,7 +299,7 @@ export const ReverseMode = ({
         // Giá bán theo trend (luôn là uptrend vì đã check ở trên)
         appendLog(`trend: ${stable.trend}`, 'info');
         // Bán cao hơn mua theo tỷ lệ discount
-        const truncated = (Number(buyPrice) * (1 + discount / 100)).toString();
+        const truncated = (Number(buyPrice) * (1 - discount / 100)).toString();
 
         // Thiết lập giá lệnh đảo chiều
         await setReversePrice(tab, truncated.toString());
@@ -323,7 +313,7 @@ export const ReverseMode = ({
           if (tab.id) {
             await chrome.tabs.reload(tab.id);
           }
-          await new Promise(resolve => setTimeout(resolve, 3600000)); // chờ 1 tiếng (3600000ms)
+          await new Promise(resolve => setTimeout(resolve, 360000)); // chờ 1 tiếng (3600000ms)
           if (tab.id) {
             await chrome.tabs.reload(tab.id);
           }

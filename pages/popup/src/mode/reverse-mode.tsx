@@ -64,6 +64,7 @@ export const ReverseMode = ({
       minDiscount: string;
       maxDiscount: string;
       buyPriceIncrease: string;
+      reverseMode: 'safe' | 'profit';
     };
 
     if (!data.timeout || !data.count || !data.minDiscount || !data.maxDiscount) {
@@ -105,6 +106,9 @@ export const ReverseMode = ({
     data['runNum'] = runNum;
     data['runPrice'] = runPrice;
     data['runType'] = runType;
+
+    // reverse mode: safe (sell at buy*(1 - discount)) or profit (sell at buy*(1 + discount))
+    data['reverseMode'] = (setting as any)['reverseMode'] || 'profit';
 
     data['minSleep'] = setting['minSleep'] || '1';
     data['maxSleep'] = setting['maxSleep'] || '5';
@@ -298,8 +302,10 @@ export const ReverseMode = ({
 
         // Giá bán theo trend (luôn là uptrend vì đã check ở trên)
         appendLog(`trend: ${stable.trend}`, 'info');
-        // Bán cao hơn mua theo tỷ lệ discount
-        const truncated = (Number(buyPrice) * (1 - discount / 100)).toString();
+        // Bán theo chế độ đảo chiều: safe giảm giá (1 - discount) hoặc profit tăng giá (1 + discount)
+        const truncated = (
+          Number(buyPrice) * (options.reverseMode === 'safe' ? 1 - discount / 100 : 1 + discount / 100)
+        ).toString();
 
         // Thiết lập giá lệnh đảo chiều
         await setReversePrice(tab, truncated.toString());
@@ -385,6 +391,28 @@ export const ReverseMode = ({
 
   return (
     <form className="mt-4 flex w-full flex-col gap-4" onSubmit={handleSubmit}>
+      <div className="flex w-full max-w-sm items-center justify-between gap-3">
+        <Label className="w-28 flex-none">Chế độ đảo chiều</Label>
+        <RadioGroup
+          name="reverseMode"
+          disabled={runing}
+          defaultValue={(setting as any).reverseMode ?? 'profit'}
+          className="flex items-center gap-4"
+          onValueChange={value => settingStorage.setVal({ reverseMode: value } as unknown as any)}>
+          <div className="flex items-center">
+            <RadioGroupItem value="profit" id="profit" />
+            <Label htmlFor="profit" className="pl-2 text-xs">
+              Chơi lời (bán cao hơn)
+            </Label>
+          </div>
+          <div className="flex items-center">
+            <RadioGroupItem value="safe" id="safe" />
+            <Label htmlFor="safe" className="pl-2 text-xs">
+              Chơi an toàn (bán rẻ hơn)
+            </Label>
+          </div>
+        </RadioGroup>
+      </div>
       {/* <div className="flex w-full max-w-sm items-center justify-between gap-3">
         <Label htmlFor="dot" className="w-28 flex-none">
           Giữ lại chữ số thập phân khi bán

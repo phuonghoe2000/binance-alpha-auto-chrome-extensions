@@ -254,15 +254,6 @@ export const ReverseMode = ({
           appendLog(stable.message, 'success');
         }
 
-        // Kiểm tra xu hướng: chỉ đặt lệnh khi uptrend
-        if (stable.trend !== 'uptrend') {
-          appendLog('Không phải xu hướng tăng, không đặt lệnh', 'info');
-          // Đợi 1 giây nhỏ trước khi next loop để tránh vòng lặp quá nhanh
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          i--;
-          continue;
-        }
-
         // 开启反向订单
         await openReverseOrder(tab);
         let buyPrice = await getPrice(symbol, api);
@@ -308,10 +299,6 @@ export const ReverseMode = ({
           i--;
           continue;
         }
->>>>>>> 0d2be6d (some change to reduce the discount)
-
-=======
->>>>>>> 6db781e (update strategy)
         // Uptrend: đặt giá mua cao hơn theo % được cấu hình
         const buyPriceIncrease = Number(options.buyPriceIncrease || '0.01'); // default 0.01%
         const submitPrice = (Number(buyPrice) * (1 + buyPriceIncrease / 100)).toString();

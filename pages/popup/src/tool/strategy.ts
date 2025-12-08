@@ -46,10 +46,8 @@ export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000004): boolea
   // console.log('Slope:', slope);
 
   // Thêm điều kiện: giá hiện tại phải cao hơn giá trung bình
-  const currentPrice = data[data.length - 1];
-  const isAboveAverage = currentPrice > avgY;
 
-  return slope > toSlope && isAboveAverage; // Độ dốc dương và giá trên trung bình
+  return slope > toSlope; // Độ dốc dương đại diện cho xu hướng tăng
 };
 
 /**
@@ -61,20 +59,11 @@ export const algo2_Momentum = (klines: string[][], confirm = 2): boolean => {
   if (data.length < confirm + 1) return false;
 
   let count = 0;
-  let totalIncrease = 0;
 
   for (let i = data.length - confirm; i < data.length; i++) {
-    if (data[i] > data[i - 1]) {
-      count++;
-      // Tính % tăng
-      const increase = ((data[i] - data[i - 1]) / data[i - 1]) * 100;
-      totalIncrease += increase;
-    }
+    if (data[i] > data[i - 1]) count++;
   }
-
-  // Yêu cầu trung bình mỗi nến tăng ít nhất 0.02% (conservative)
-  const avgIncrease = totalIncrease / confirm;
-  return count >= confirm && avgIncrease > 0.02; // Tăng liên tiếp và đủ biên độ
+  return count >= confirm;
 };
 
 /**
@@ -94,21 +83,18 @@ export const algo3_ShortVsLong = (klines: string[][], short = 5, long = 20) => {
   const shortSlope = shortNow - prevShort;
   const longSlope = longNow - prevLong;
 
-  // Tính khoảng cách % giữa 2 đường MA
-  const maDistance = ((shortNow - longNow) / longNow) * 100;
-
   // Yêu cầu (conservative):
   // 1. MA ngắn hạn tăng nhanh hơn MA dài hạn
   // 2. MA ngắn hạn đang tăng
   // 3. Khoảng cách giữa 2 MA > 0.05%
-  return shortSlope > longSlope && shortSlope > 0 && maDistance > 0.05;
+  return shortSlope > longSlope && shortSlope > 0;
 };
 
 /**
  * Thuật toán 4: Biến động hội tụ rồi bứt phá (sau giai đoạn biến động thấp)
  * Nếu biến động gần đây giảm và giá mới nhất vượt biên trên → tín hiệu mua
  */
-export const algo4_VolatilityBreak = (klines: string[][], lookback = 20) => {
+export const algo4_VolatilityBreak = (klines: string[][], lookback = 10) => {
   const data = extractClosePrices(klines);
   if (data.length < lookback) return false;
   const recent = data.slice(-lookback);
@@ -119,12 +105,7 @@ export const algo4_VolatilityBreak = (klines: string[][], lookback = 20) => {
   const upper = avg + vol * 1.1;
   const curr = recent[recent.length - 1];
 
-  // Thêm điều kiện: 2 giá gần nhất phải tăng
-  const prev = recent[recent.length - 2];
-  const prev2 = recent[recent.length - 3] ?? prev;
-  const increasing = curr > prev && prev > prev2;
-
-  return curr > upper && increasing;
+  return curr > upper;
 };
 
 /**
@@ -171,16 +152,11 @@ export const algo5_Acceleration = (klines: string[][]) => {
   const a2 = data[data.length - 2] - data[data.length - 3];
   const a3 = data[data.length - 3] - data[data.length - 4];
 
-  // Tính % thay đổi
-  const p1 = (a1 / data[data.length - 2]) * 100;
-  const p2 = (a2 / data[data.length - 3]) * 100;
-  const p3 = (a3 / data[data.length - 4]) * 100;
-
   // Yêu cầu (conservative):
   // 1. Tốc độ tăng tăng dần
   // 2. Biên độ tăng gần nhất > 0.02%
   // 3. Tất cả các biến động đều dương
-  return a1 > a2 && a2 > a3 && p1 > 0.01 && p1 > 0 && p2 > 0 && p3 > 0;
+  return a1 > a2 && a2 > a3 && a1 > 0;
 };
 
 /**

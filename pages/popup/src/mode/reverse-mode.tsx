@@ -18,7 +18,6 @@ import {
   injectDependencies,
   waitSellOrder,
   startRandom,
-  stopRandom,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
 import { settingStorage, StategySettingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
@@ -65,9 +64,7 @@ export const ReverseMode = ({
       maxSleep: string;
       minDiscount: string;
       maxDiscount: string;
-<<<<<<< HEAD
       priceRatio: string;
-=======
       buyPriceIncrease: string;
       reverseMode: 'safe' | 'profit';
     };
@@ -113,7 +110,7 @@ export const ReverseMode = ({
     data['runType'] = runType;
 
     // reverse mode: safe (sell at buy*(1 - discount)) or profit (sell at buy*(1 + discount))
-    data['reverseMode'] = (setting as any)['reverseMode'] || 'profit';
+    data['reverseMode'] = setting.reverseMode || 'profit';
 
     data['minSleep'] = setting['minSleep'] || '1';
     data['maxSleep'] = setting['maxSleep'] || '5';
@@ -278,18 +275,6 @@ export const ReverseMode = ({
         //     ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString()
         //     : (Number(buyPrice) + Number(buyPrice) * 0.00001).toString(); // 调整买入价
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-        // const submitPrice =
-        //   stable.trend === '上涨趋势' ? (Number(buyPrice) + Number(buyPrice) * 0.0001).toString() : buyPrice;
-
-        // 溢价率 %
-        const priceRatio = Number(options.priceRatio);
-        // 计算小数点数量
-        const pricePrecision = buyPrice.toString().split('.')[1].length;
-        // 调整买入价
-        const submitPrice = floor(Number(buyPrice) * (1 + priceRatio * 0.01), pricePrecision).toString();
-=======
         // Với uptrend: đặt giá mua cao hơn theo tỷ lệ cấu hình, giá bán cũng cao hơn
         // Với sideways: không đặt lệnh để tránh rủi ro
         if (stable.trend !== 'uptrend') {
@@ -371,12 +356,13 @@ export const ReverseMode = ({
         if (runType === 'price' && price >= runPrice) {
           break;
         }
-      } catch (error: any) {
-        appendLog(error.message, 'error');
-        if (error.message.includes('\u5237\u65b0\u9875\u9762') || error.message.includes('Làm mới trang')) {
+      } catch (error: unknown) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        appendLog(errorMsg, 'error');
+        if (errorMsg.includes('\u5237\u65b0\u9875\u9762') || errorMsg.includes('Làm mới trang')) {
           if (tab.id) await chrome.tabs.reload(tab.id);
           await new Promise(resolve => setTimeout(resolve, 5000));
-        } else if (index % 10 === 0 || error.message.includes('不存在')) {
+        } else if (index % 10 === 0 || errorMsg.includes('不存在')) {
           if (tab.id) await chrome.tabs.reload(tab.id);
           await new Promise(resolve => setTimeout(resolve, 5000));
         }
@@ -417,9 +403,9 @@ export const ReverseMode = ({
         <RadioGroup
           name="reverseMode"
           disabled={runing}
-          defaultValue={(setting as any).reverseMode ?? 'profit'}
+          defaultValue={setting.reverseMode ?? 'profit'}
           className="flex items-center gap-4"
-          onValueChange={value => settingStorage.setVal({ reverseMode: value } as unknown as any)}>
+          onValueChange={value => settingStorage.setVal({ reverseMode: value as 'safe' | 'profit' })}>
           <div className="flex items-center">
             <RadioGroupItem value="profit" id="profit" />
             <Label htmlFor="profit" className="pl-2 text-xs">

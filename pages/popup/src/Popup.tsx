@@ -356,6 +356,42 @@ const Popup = () => {
             <CollapsibleContent className={cn('flex flex-col gap-2', isOpen && 'mt-4')}>
               <div className="mb-2 flex flex-col gap-2">
                 <div className="flex w-full max-w-sm items-center justify-between gap-3">
+                  <Label className="w-28 flex-none">Chế độ Strategy</Label>
+                  <RadioGroup
+                    disabled={runing}
+                    className="flex items-center gap-3"
+                    defaultValue={strategy.strategyMode || 'balanced'}
+                    onValueChange={value =>
+                      StategySettingStorage.setVal({
+                        strategyMode: value as 'conservative' | 'balanced' | 'aggressive',
+                      })
+                    }>
+                    <div className="flex items-center gap-1">
+                      <RadioGroupItem value="conservative" id="conservative" />
+                      <Label htmlFor="conservative" className="text-xs text-green-600">
+                        An toàn
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <RadioGroupItem value="balanced" id="balanced" />
+                      <Label htmlFor="balanced" className="text-xs text-yellow-600">
+                        Cân bằng
+                      </Label>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <RadioGroupItem value="aggressive" id="aggressive" />
+                      <Label htmlFor="aggressive" className="text-xs text-red-600">
+                        Tấn công
+                      </Label>
+                    </div>
+                  </RadioGroup>
+                </div>
+                <div className="text-xs">
+                  💹 An toàn: ≥3 algo + không downtrend | Cân bằng: ≥2 algo + không downtrend | Tấn công: ≥1 algo
+                </div>
+              </div>
+              <div className="mb-2 flex flex-col gap-2">
+                <div className="flex w-full max-w-sm items-center justify-between gap-3">
                   <Label htmlFor="upThreshold" className="w-28 flex-none">
                     Ngưỡng xác nhận xu hướng tăng
                   </Label>

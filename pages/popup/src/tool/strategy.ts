@@ -195,17 +195,44 @@ export const checkMarketStable = async (
   const data = json.data;
 
   const a = analyzeFast(data, options.toSlope, options.confirm, options.short, options.long, options.limit);
-  // Đánh giá có thể cày điểm hay không
-  const stable = a.TrendSlope || a.Momentum || a.ShortVsLong || a.VolatilityBreak || a.Acceleration;
 
-  // Nếu có từ hai chỉ báo trở lên đúng thì coi là xu hướng tăng
+  // Đếm số algo đúng
   const trueCount = [a.TrendSlope, a.Momentum, a.ShortVsLong, a.VolatilityBreak, a.Acceleration].filter(
     (v: boolean) => v,
   ).length;
 
+  // Check downtrend protection: giá hiện tại < MA dài hạn
+  const closes = extractClosePrices(data);
+  const currentPrice = closes[closes.length - 1];
+  const maLong = closes.slice(-options.long).reduce((a, b) => a + b, 0) / options.long;
+  const isDowntrend = currentPrice < maLong * 0.998; // Giá thấp hơn MA 0.2%
+
+  // Đánh giá có thể cày điểm hay không - theo từng mode
+  const mode = options.strategyMode || 'balanced';
+  let stable = false;
+  let modeDesc = '';
+
+  switch (mode) {
+    case 'conservative':
+      // Conservative: ≥3 algo đúng VÀ không downtrend
+      stable = trueCount >= 3 && !isDowntrend;
+      modeDesc = `[Conservative] ${trueCount}/5 algo, downtrend=${isDowntrend}`;
+      break;
+    case 'balanced':
+      // Balanced: ≥2 algo đúng VÀ không downtrend mạnh
+      stable = trueCount >= 2 && !isDowntrend;
+      modeDesc = `[Balanced] ${trueCount}/5 algo, downtrend=${isDowntrend}`;
+      break;
+    case 'aggressive':
+      // Aggressive: ≥1 algo đúng (giữ nguyên logic cũ)
+      stable = trueCount >= 1;
+      modeDesc = `[Aggressive] ${trueCount}/5 algo`;
+      break;
+  }
+
   const trend = trueCount >= options.upThreshold ? 'uptrend' : 'downtrend';
 
-  const message = stable ? `✅ Có thể giao dịch` : `❌ Không thể giao dịch`;
+  const message = stable ? `✅ Có thể giao dịch - ${modeDesc}` : `❌ Không thể giao dịch - ${modeDesc}`;
 
   return {
     symbol,

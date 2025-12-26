@@ -42,7 +42,7 @@ export const injectDependencies = async (tab: chrome.tabs.Tab) => {
         };
       };
 
-      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 10, maxDelay = 30) => {
+      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 3, maxDelay = 8) => {
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
 
         input.focus();
@@ -513,6 +513,10 @@ export const backSell = async (
         await new Promise(resolve => setTimeout(resolve, 3000));
         await chrome.tabs.reload(tab.id!);
         await new Promise(resolve => setTimeout(resolve, 5000));
+        // Inject lại dependencies sau khi reload
+        await injectDependencies(tab);
+        // Hủy tất cả order còn lại
+        await cancelOrder(tab);
         safe = false;
         continue;
       }
@@ -659,7 +663,7 @@ export const getBalance = async (tab: chrome.tabs.Tab) => {
   return await callChromeJs(tab, [], async () => {
     try {
       const UsdtEle = document.querySelector(
-        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .t-caption1 div[class~="text-PrimaryText"]',
+        '#__APP > div > div.bg-TradeBg.md\\:pt-\\[4px\\].h-\\[1097px\\].relative.flex-layout-container > div > div:nth-child(9) > div > div > div > div > div.bn-flex.h-auto.md\\:h-\\[310px\\].flex-col.justify-start.gap-y-\\[8px\\].mt-\\[8px\\] > div.flex.flex-col.gap-\\[10px\\] > div.bn-flex.flex.flex-col.gap-\\[4px\\] > div.bn-flex.space-x-\\[4px\\].py-\\[2px\\].items-center > div.t-caption1.text-TertiaryText.flex-1 > div > div > div.bn-flex.gap-\\[4px\\].items-center > div',
       ) as HTMLSpanElement;
       if (!UsdtEle) throw new Error('Không lấy được số dư, hãy kiểm tra trang có chính xác không');
       // Trả về số dư (chuỗi)
@@ -759,25 +763,42 @@ export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
 export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
   price = price.replace('.', ',');
-  return await callChromeJs(tab, [price], async price => {
-    try {
-      const limitTotals = document.querySelectorAll('input#limitTotal');
-      if (!limitTotals.length || limitTotals.length < 2)
-        throw new Error('Không tìm thấy phần tử giá đảo chiều, hãy kiểm tra trang có chính xác không');
-      const limitTotal = limitTotals[1] as any;
-      const setValue = async (selector: string | HTMLInputElement, value: string) => {
-        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
-        if (!input) throw new Error('input元素不存在');
-        await window.humanType(input as HTMLInputElement, value);
-      };
-      // 卖出价格
-      await setValue(limitTotal, price);
-      await new Promise(resolve => setTimeout(resolve, 16));
-      return { error: '', val: true };
-    } catch (error: any) {
-      return { error: error.message, val: false };
-    }
-  });
+
+  const trySetPrice = async () =>
+    await callChromeJs(tab, [price], async price => {
+      try {
+        const limitTotals = document.querySelectorAll('input#limitTotal');
+        if (!limitTotals.length || limitTotals.length < 2) {
+          console.log('[setReversePrice] missing-limit-total, cần refresh trang');
+          return { error: '', val: false }; // Return false để trigger reload
+        }
+
+        const limitTotal = limitTotals[1] as any;
+        const setValue = async (selector: string | HTMLInputElement, value: string) => {
+          const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+          if (!input) throw new Error('input元素不存在');
+          await window.humanType(input as HTMLInputElement, value);
+        };
+        await setValue(limitTotal, price);
+        await new Promise(resolve => setTimeout(resolve, 16));
+        return { error: '', val: true };
+      } catch (error: any) {
+        return { error: error.message, val: false };
+      }
+    });
+
+  // Thử lần đầu
+  if (await trySetPrice()) return true;
+
+  // Không tìm thấy -> refresh trang và thử lại 1 lần
+  console.log('[setReversePrice] Không tìm thấy phần tử, đang refresh trang...');
+  await chrome.tabs.reload(tab.id!);
+  await new Promise(resolve => setTimeout(resolve, 5000));
+  await injectDependencies(tab);
+
+  if (await trySetPrice()) return true;
+
+  throw new Error('Không tìm thấy phần tử giá đảo chiều sau khi thử làm mới trang');
 };
 
 export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>

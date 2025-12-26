@@ -277,13 +277,6 @@ export const ReverseMode = ({
 
         // Với uptrend: đặt giá mua cao hơn theo tỷ lệ cấu hình, giá bán cũng cao hơn
         // Với sideways: không đặt lệnh để tránh rủi ro
-        if (stable.trend !== 'uptrend') {
-          appendLog('Không phải xu hướng tăng, không đặt lệnh', 'info');
-          // Đợi 1 giây nhỏ trước khi next loop để tránh vòng lặp quá nhanh
-          await new Promise(resolve => setTimeout(resolve, 1000));
-          i--;
-          continue;
-        }
         // Uptrend: đặt giá mua cao hơn theo % được cấu hình
         const buyPriceIncrease = Number(options.buyPriceIncrease || '0.01'); // default 0.01%
         const submitPrice = (Number(buyPrice) * (1 + buyPriceIncrease / 100)).toString();

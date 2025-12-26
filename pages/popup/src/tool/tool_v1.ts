@@ -624,16 +624,24 @@ export const detectDropRisk = (
   return res;
 };
 
-// 获取余额
+// 获取余额 (Get Balance / Lấy số dư)
+// 功能说明 (Function Description / Mô tả chức năng):
+// 1. 首先跳转到买入面板 (First jump to buy panel / Trước tiên chuyển đến bảng mua)
+// 2. 从 DOM 元素中读取 USDT 余额 (Read USDT balance from DOM element / Đọc số dư USDT từ phần tử DOM)
+// 3. DOM选择器 (DOM Selector / Bộ chọn DOM): '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .t-caption1 div[class~="text-PrimaryText"]'
+// 4. 移除 " USDT" 文本后返回余额数值 (Remove " USDT" text and return balance value / Xóa văn bản " USDT" và trả về giá trị số dư)
 export const getBalance = async (tab: chrome.tabs.Tab) => {
   await jumpToBuy(tab);
   return await callChromeJs(tab, [], async () => {
     try {
+      // 查找包含余额的 DOM 元素 (Find DOM element containing balance / Tìm phần tử DOM chứa số dư)
       const UsdtEle = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .t-caption1 div[class~="text-PrimaryText"]',
       ) as HTMLSpanElement;
       if (!UsdtEle) throw new Error('获取不到余额, 请确认页面是否正确');
-      // 返回余额（字符串）
+      // 返回余额（字符串，已移除 " USDT" 后缀）
+      // Return balance (string, with " USDT" suffix removed)
+      // Trả về số dư (chuỗi, đã xóa hậu tố " USDT")
       return { error: '', val: UsdtEle.textContent.replace(' USDT', '') };
     } catch (error: any) {
       return { error: error.message, val: '' };

@@ -57,9 +57,12 @@ const Popup = () => {
   }, [noMulDeal, num]);
 
   const [runing, setRuning] = useState(false);
-  // 开始余额
+  // 开始余额 (Initial Balance / Số dư ban đầu)
+  // 此值从页面 DOM 元素中获取: .flexlayout__tab[data-layout-path="/r1/ts0/t0"] .t-caption1 div[class~="text-PrimaryText"]
+  // This value is fetched from the page DOM element using the selector above
+  // Giá trị này được lấy từ phần tử DOM của trang bằng selector ở trên
   const [startBalance, setStartBalance] = useState('');
-  // 当前余额
+  // 当前余额 (Current Balance / Số dư hiện tại)
   const [currentBalance, setCurrentBalance] = useState('');
   // 日志
   const { render, appendLog, clearLogger } = useLogger();
@@ -130,10 +133,17 @@ const Popup = () => {
 
   useLayoutEffect(() => {
     getNewVersion();
+    // 初始化获取余额 (Initialize balance fetching / Khởi tạo lấy số dư)
+    // 从页面 DOM 元素中读取当前 USDT 余额并设置为开始余额和当前余额
+    // Read current USDT balance from page DOM element and set as both start balance and current balance
+    // Đọc số dư USDT hiện tại từ phần tử DOM của trang và đặt làm cả số dư ban đầu và số dư hiện tại
     (async (setStartBalance, setCurrentBalance, appendLog) => {
       try {
         const [tab] = await chrome.tabs.query({ currentWindow: true, active: true });
         await injectDependencies(tab);
+        // 调用 getBalance 函数从 Binance 页面获取余额
+        // Call getBalance function to fetch balance from Binance page
+        // Gọi hàm getBalance để lấy số dư từ trang Binance
         const balance = await getBalance(tab);
         setStartBalance(balance);
         setCurrentBalance(balance);

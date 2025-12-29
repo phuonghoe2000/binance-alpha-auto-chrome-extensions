@@ -236,6 +236,21 @@ export const ReverseMode = ({
 
         setNum(Date.now());
 
+        // Nếu tổn hao thao tác > 100u: refresh, huỷ mọi order rồi thử lại
+        const balanceNum = Number(balance.toString().replace(/,/g, ''));
+        const startBalanceNum = Number((startBalance ?? '').toString().replace(/,/g, ''));
+        if (isFinite(balanceNum) && isFinite(startBalanceNum) && startBalanceNum - balanceNum > 100) {
+          appendLog('Tổn hao thao tác > 100u, refresh trang và hủy mọi order trước khi tiếp tục', 'error');
+          if (tab.id) {
+            await chrome.tabs.reload(tab.id);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+          }
+          await injectDependencies(tab);
+          await cancelOrder(tab);
+          i--;
+          continue;
+        }
+
         sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
 
         await new Promise(resolve => setTimeout(resolve, sleepTime));

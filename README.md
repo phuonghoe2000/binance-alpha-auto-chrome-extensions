@@ -3,13 +3,9 @@
       <img alt="Logo" src="./docs/app.png" />
   </picture>
 
-<<<<<<< HEAD
-## 项目介绍
-=======
 ## 🚀 Liên kết mời [Nhấn để đi đến](https://accounts.maxweb.black/register?ref=TETAP)
 
 ## Giới thiệu dự án
->>>>>>> 304430a (Translate Chinese content to Vietnamese)
 
 Một công cụ giao dịch Binance Alpha dựa trên tiện ích mở rộng Chrome.
 

@@ -662,12 +662,22 @@ export const getBalance = async (tab: chrome.tabs.Tab) => {
   await jumpToBuy(tab);
   return await callChromeJs(tab, [], async () => {
     try {
-      const UsdtEle = document.querySelector(
-        '#__APP > div > div.bg-TradeBg.md\\:pt-\\[4px\\].h-\\[1097px\\].relative.flex-layout-container > div > div:nth-child(9) > div > div > div > div > div.bn-flex.h-auto.md\\:h-\\[310px\\].flex-col.justify-start.gap-y-\\[8px\\].mt-\\[8px\\] > div.flex.flex-col.gap-\\[10px\\] > div.bn-flex.flex.flex-col.gap-\\[4px\\] > div.bn-flex.space-x-\\[4px\\].py-\\[2px\\].items-center > div.t-caption1.text-TertiaryText.flex-1 > div > div > div.bn-flex.gap-\\[4px\\].items-center > div',
-      ) as HTMLSpanElement;
+      // Tìm element chứa số dư USDT bằng cách tìm text content
+      const allElements = document.querySelectorAll('#__APP div');
+      let UsdtEle: HTMLElement | null = null;
+
+      for (const el of allElements) {
+        const text = el.textContent || '';
+        // Tìm element có text match pattern số + USDT và là leaf node (không có child element chứa USDT)
+        if (/^\d+(\.\d+)?\s*USDT$/.test(text.trim())) {
+          UsdtEle = el as HTMLElement;
+          break;
+        }
+      }
+
       if (!UsdtEle) throw new Error('Không lấy được số dư, hãy kiểm tra trang có chính xác không');
       // Trả về số dư (chuỗi)
-      return { error: '', val: UsdtEle.textContent.replace(' USDT', '') };
+      return { error: '', val: UsdtEle.textContent!.replace(/\s*USDT\s*/, '').trim() };
     } catch (error: any) {
       return { error: error.message, val: '' };
     }
@@ -685,41 +695,101 @@ export const checkUnknownModal = async (tab: chrome.tabs.Tab) =>
     }
   });
 
-export const cancelOrder = async (tab: chrome.tabs.Tab) =>
-  await callChromeJs(tab, [], async () => {
-    // Kiểm tra xem có đơn đặt lệnh hay không
-    const cancelAll = document.querySelector(
-      '#bn-tab-pane-orderOrder th[aria-colindex="10"] div[class="text-TextLink cursor-pointer"]',
-    ) as HTMLButtonElement;
-    // Nếu không có nghĩa là chưa có lệnh
-    if (cancelAll) {
-      await window.dispatchMouseEvent(cancelAll);
+export const cancelOrder = async (tab: chrome.tabs.Tab, maxRetries = 3) => {
+  for (let retry = 0; retry < maxRetries; retry++) {
+    const result = await callChromeJs(tab, [], async () => {
+      try {
+        // Kiểm tra xem có đơn đặt lệnh hay không - thử nhiều selector
+        const cancelAllSelectors = [
+          '#bn-tab-pane-orderOrder th[aria-colindex="10"] div[class="text-TextLink cursor-pointer"]',
+          '#bn-tab-pane-orderOrder th div[class*="text-TextLink"][class*="cursor-pointer"]',
+          '#bn-tab-pane-orderOrder .text-TextLink.cursor-pointer',
+        ];
 
-      await new Promise(resolve => setTimeout(resolve, 300));
-      // Hộp thoại xác nhận
-      const btn = document.querySelector(
-        '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
-      ) as HTMLButtonElement;
-      if (btn) {
-        await window.dispatchMouseEvent(btn);
+        let cancelAll: HTMLElement | null = null;
+        for (const selector of cancelAllSelectors) {
+          cancelAll = document.querySelector(selector) as HTMLElement;
+          if (cancelAll) break;
+        }
+
+        // Nếu không có nghĩa là chưa có lệnh
+        if (cancelAll) {
+          await window.dispatchMouseEvent(cancelAll);
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Hộp thoại xác nhận - thử nhiều selector
+          const confirmSelectors = [
+            '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
+            '.bn-modal-confirm button[class*="primary"]',
+            'div[role="dialog"] button[class*="primary"]',
+          ];
+
+          for (const selector of confirmSelectors) {
+            const btn = document.querySelector(selector) as HTMLButtonElement;
+            if (btn) {
+              await window.dispatchMouseEvent(btn);
+              break;
+            }
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
+        // Kiểm tra từng order riêng lẻ - sửa selector bị thiếu dấu "
+        const orderSelectors = [
+          '#bn-tab-pane-orderOrder td div[style*="color: var(--color-Buy)"]',
+          '#bn-tab-pane-orderOrder tr[data-row-key] td:last-child svg',
+          '#bn-tab-pane-orderOrder td[aria-colindex="10"] svg',
+        ];
+
+        for (const selector of orderSelectors) {
+          const orderList = Array.from(document.querySelectorAll(selector));
+          if (orderList.length) {
+            // Dùng for...of thay vì forEach để đợi async
+            for (const order of orderList) {
+              await window.dispatchMouseEvent(order);
+              await new Promise(resolve => setTimeout(resolve, 300));
+
+              // Click confirm nếu có
+              for (const confirmSelector of [
+                '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
+                'div[role="dialog"] button[class*="primary"]',
+              ]) {
+                const confirmBtn = document.querySelector(confirmSelector) as HTMLButtonElement;
+                if (confirmBtn) {
+                  await window.dispatchMouseEvent(confirmBtn);
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  break;
+                }
+              }
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        // Kiểm tra còn order không
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const remainingOrders = document.querySelectorAll('#bn-tab-pane-orderOrder tr[data-row-key]');
+        const hasOrders = remainingOrders.length > 0;
+
+        return { error: '', val: true, hasOrders };
+      } catch (error: any) {
+        return { error: error.message, val: false, hasOrders: true };
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    });
+
+    // Nếu không còn order hoặc không có lỗi thì return
+    if (result && !result.hasOrders) {
+      return result;
     }
 
-    const orderList = Array.from(
-      document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);'),
-    );
-    if (orderList.length) {
-      // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
-      orderList.forEach(async order => {
-        const btn = order.querySelector('td[aria-colindex="10"] svg')!;
-        await window.dispatchMouseEvent(btn);
-      });
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Nếu còn order, đợi và thử lại
+    if (retry < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
+  }
 
-    return { error: '', val: true };
-  });
+  return { error: '', val: true };
+};
 
 export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], async () => {

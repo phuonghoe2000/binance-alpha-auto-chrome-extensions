@@ -241,12 +241,44 @@ export const ReverseMode = ({
         const startBalanceNum = Number((startBalance ?? '').toString().replace(/,/g, ''));
         if (isFinite(balanceNum) && isFinite(startBalanceNum) && startBalanceNum - balanceNum > 100) {
           appendLog('Tổn hao thao tác > 100u, refresh trang và hủy mọi order trước khi tiếp tục', 'error');
+
+          // Thử cancel order trước khi refresh (với retry)
+          await injectDependencies(tab);
+          for (let cancelRetry = 0; cancelRetry < 3; cancelRetry++) {
+            appendLog(`Đang thử hủy order lần ${cancelRetry + 1}...`, 'info');
+            await cancelOrder(tab, 3);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+
+          // Refresh trang
           if (tab.id) {
             await chrome.tabs.reload(tab.id);
             await new Promise(resolve => setTimeout(resolve, 5000));
           }
           await injectDependencies(tab);
-          await cancelOrder(tab);
+
+          // Cancel order lần nữa sau refresh
+          for (let cancelRetry = 0; cancelRetry < 3; cancelRetry++) {
+            appendLog(`Đang thử hủy order sau refresh lần ${cancelRetry + 1}...`, 'info');
+            await cancelOrder(tab, 3);
+            await new Promise(resolve => setTimeout(resolve, 2000));
+          }
+
+          // Kiểm tra lại balance sau khi cancel
+          const newBalance = await getBalance(tab);
+          if (newBalance) {
+            const newBalanceNum = Number(newBalance.toString().replace(/,/g, ''));
+            if (isFinite(newBalanceNum) && isFinite(startBalanceNum) && startBalanceNum - newBalanceNum > 100) {
+              appendLog(
+                `Vẫn còn tổn hao > 100u sau khi cancel (${startBalanceNum - newBalanceNum}u), tiếp tục thử...`,
+                'error',
+              );
+            } else {
+              appendLog(`Đã cancel thành công, tổn hao hiện tại: ${startBalanceNum - newBalanceNum}u`, 'success');
+            }
+            setCurrentBalance(newBalance);
+          }
+
           i--;
           continue;
         }

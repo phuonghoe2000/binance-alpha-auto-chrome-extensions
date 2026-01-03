@@ -177,6 +177,148 @@ export const analyzeFast = (
   Acceleration: algo5_Acceleration(klines),
 });
 
+// =====================
+// Dynamic Discount Strategy
+// =====================
+
+export interface DynamicDiscountResult {
+  discount: number; // % discount tính được
+  confidence: 'high' | 'medium' | 'low'; // Độ tin cậy
+  volatility: number; // % biến động
+  momentum: number; // % momentum (tốc độ tăng)
+  message: string;
+}
+
+/**
+ * Tính toán discount động dựa trên volatility và momentum của giao dịch gần đây
+ *
+ * Logic:
+ * - Volatility cao + momentum mạnh → discount cao hơn (có thể đặt giá bán xa hơn)
+ * - Volatility thấp + momentum yếu → discount thấp hơn (đặt giá bán gần hơn để chắc chắn khớp)
+ *
+ * @param api - API endpoint
+ * @param symbol - Symbol giao dịch
+ * @param minDiscount - Discount tối thiểu (%)
+ * @param maxDiscount - Discount tối đa (%)
+ * @param limit - Số nến K-line để phân tích
+ */
+export const calculateDynamicDiscount = async (
+  api: string,
+  symbol: string,
+  minDiscount: number = 0.2,
+  maxDiscount: number = 0.5,
+  limit: number = 30,
+): Promise<DynamicDiscountResult> => {
+  api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
+  const url = `${api}/bapi/defi/v1/public/alpha-trade/klines?interval=1s&limit=${limit}&symbol=${symbol}`;
+
+  try {
+    const res = await fetch(url);
+    const json: AlphaKlineResponse = await res.json();
+
+    if (!json.success || !Array.isArray(json.data) || json.data.length < 10) {
+      return {
+        discount: (minDiscount + maxDiscount) / 2,
+        confidence: 'low',
+        volatility: 0,
+        momentum: 0,
+        message: 'Không đủ dữ liệu, dùng discount trung bình',
+      };
+    }
+
+    const closes = extractClosePrices(json.data);
+    const n = closes.length;
+
+    // 1. Tính Volatility (độ biến động) - sử dụng Standard Deviation
+    const avgPrice = closes.reduce((a, b) => a + b, 0) / n;
+    const variance = closes.reduce((sum, p) => sum + Math.pow(p - avgPrice, 2), 0) / n;
+    const stdDev = Math.sqrt(variance);
+    const volatilityPct = (stdDev / avgPrice) * 100; // % biến động
+
+    // 2. Tính Momentum (tốc độ tăng giá) - % thay đổi từ đầu đến cuối
+    const firstPrice = closes[0];
+    const lastPrice = closes[n - 1];
+    const momentumPct = ((lastPrice - firstPrice) / firstPrice) * 100;
+
+    // 3. Tính Average True Range (ATR) đơn giản - khoảng biến động trung bình
+    let atrSum = 0;
+    for (let i = 1; i < n; i++) {
+      atrSum += Math.abs(closes[i] - closes[i - 1]);
+    }
+    // ATR có thể dùng trong tương lai
+    void atrSum;
+
+    // 4. Tính momentum gần nhất (5 nến cuối)
+    const recentMomentum = n >= 5 ? ((closes[n - 1] - closes[n - 5]) / closes[n - 5]) * 100 : momentumPct;
+
+    // 5. Tính discount dựa trên các chỉ số
+    // - Nếu volatility cao + momentum dương mạnh → discount cao (có thể đặt giá xa)
+    // - Nếu volatility thấp hoặc momentum âm → discount thấp (đặt giá gần để an toàn)
+
+    let discountScore = 0;
+
+    // Điểm từ volatility (0-40%)
+    // Volatility cao = có nhiều cơ hội giá dao động
+    const volScore = Math.min(volatilityPct * 100, 40); // Cap at 40
+    discountScore += volScore;
+
+    // Điểm từ momentum (0-40%)
+    // Momentum dương mạnh = giá đang tăng, có thể đặt discount cao
+    if (momentumPct > 0) {
+      discountScore += Math.min(momentumPct * 20, 40);
+    } else {
+      // Momentum âm = giá đang giảm, giảm discount
+      discountScore += Math.max(momentumPct * 10, -20);
+    }
+
+    // Điểm từ recent momentum (0-20%)
+    if (recentMomentum > 0) {
+      discountScore += Math.min(recentMomentum * 10, 20);
+    }
+
+    // Normalize score to 0-100
+    discountScore = Math.max(0, Math.min(100, discountScore));
+
+    // Map score to discount range
+    const discountRange = maxDiscount - minDiscount;
+    const calculatedDiscount = minDiscount + (discountScore / 100) * discountRange;
+
+    // Xác định confidence
+    let confidence: 'high' | 'medium' | 'low';
+    if (momentumPct > 0.1 && volatilityPct > 0.05 && recentMomentum > 0) {
+      confidence = 'high';
+    } else if (momentumPct > 0 && recentMomentum >= 0) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
+
+    // Nếu confidence thấp, giảm discount để an toàn
+    let finalDiscount = calculatedDiscount;
+    if (confidence === 'low') {
+      finalDiscount = minDiscount + (calculatedDiscount - minDiscount) * 0.5;
+    } else if (confidence === 'medium') {
+      finalDiscount = minDiscount + (calculatedDiscount - minDiscount) * 0.75;
+    }
+
+    return {
+      discount: Math.round(finalDiscount * 1000) / 1000, // Round to 3 decimal places
+      confidence,
+      volatility: Math.round(volatilityPct * 10000) / 10000,
+      momentum: Math.round(momentumPct * 10000) / 10000,
+      message: `Vol: ${volatilityPct.toFixed(4)}%, Mom: ${momentumPct.toFixed(4)}%, Recent: ${recentMomentum.toFixed(4)}%`,
+    };
+  } catch {
+    return {
+      discount: (minDiscount + maxDiscount) / 2,
+      confidence: 'low',
+      volatility: 0,
+      momentum: 0,
+      message: 'Lỗi khi tính discount, dùng giá trị trung bình',
+    };
+  }
+};
+
 export const checkMarketStable = async (
   api: string,
   symbol: string, // ALPHA_175USDT

@@ -28,7 +28,7 @@ import {
   scheduleSettingStorage,
 } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
-import { checkMarketStable } from '@src/tool/strategy';
+import { checkMarketStable, calculateDynamicDiscount } from '@src/tool/strategy';
 import dayjs, { extend } from 'dayjs';
 import utc from 'dayjs/plugin/utc';
 import { floor } from 'lodash-es';
@@ -383,13 +383,34 @@ export const ReverseMode = ({
         // Thiết lập số tiền mua
         await setLimitTotal(tab, amount);
 
-        const discount = floor(
-          (Number(options.maxDiscount) - Number(options.minDiscount)) * Math.random() + Number(options.minDiscount),
-          6,
-        );
+        // Tính discount - dynamic hoặc random
+        let discount: number;
+        const discountSetting = await settingStorage.get();
+
+        if (discountSetting.dynamicDiscountEnabled) {
+          // Dynamic discount dựa trên volatility & momentum
+          const dynamicResult = await calculateDynamicDiscount(
+            api,
+            symbol,
+            Number(options.minDiscount),
+            Number(options.maxDiscount),
+            30,
+          );
+          discount = dynamicResult.discount;
+          appendLog(
+            `📊 Dynamic Discount: ${discount.toFixed(3)}% [${dynamicResult.confidence}] - ${dynamicResult.message}`,
+            'info',
+          );
+        } else {
+          // Random discount như cũ
+          discount = floor(
+            (Number(options.maxDiscount) - Number(options.minDiscount)) * Math.random() + Number(options.minDiscount),
+            6,
+          );
+        }
 
         // Giá bán theo trend (luôn là uptrend vì đã check ở trên)
-        appendLog(`trend: ${stable.trend}`, 'info');
+        appendLog(`trend: ${stable.trend}, discount: ${discount.toFixed(3)}%`, 'info');
         // Bán theo chế độ đảo chiều: safe giảm giá (1 - discount) hoặc profit tăng giá (1 + discount)
         const truncated = (
           Number(buyPrice) * (options.reverseMode === 'safe' ? 1 - discount / 100 : 1 + discount / 100)
@@ -576,6 +597,33 @@ export const ReverseMode = ({
             />
           </div>
         </div>
+      </div>
+
+      {/* Dynamic Discount Toggle */}
+      <div className="flex w-full max-w-sm items-center justify-between gap-3 rounded-md border border-blue-200 bg-blue-50 p-2">
+        <div className="flex flex-col">
+          <Label className="text-sm font-medium text-blue-700">📊 Dynamic Discount</Label>
+          <span className="text-xs text-blue-600">Tự tính chiết khấu theo volatility & momentum</span>
+        </div>
+        <RadioGroup
+          name="dynamicDiscount"
+          disabled={runing}
+          defaultValue={setting.dynamicDiscountEnabled ? 'on' : 'off'}
+          className="flex items-center gap-2"
+          onValueChange={value => settingStorage.setVal({ dynamicDiscountEnabled: value === 'on' })}>
+          <div className="flex items-center">
+            <RadioGroupItem value="off" id="dynamicOff" />
+            <Label htmlFor="dynamicOff" className="pl-1 text-xs">
+              Tắt
+            </Label>
+          </div>
+          <div className="flex items-center">
+            <RadioGroupItem value="on" id="dynamicOn" />
+            <Label htmlFor="dynamicOn" className="pl-1 text-xs text-blue-600">
+              Bật
+            </Label>
+          </div>
+        </RadioGroup>
       </div>
 
       <div className="flex w-full max-w-sm items-center justify-between gap-3">

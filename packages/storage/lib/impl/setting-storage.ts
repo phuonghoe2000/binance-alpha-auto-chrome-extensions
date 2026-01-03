@@ -44,6 +44,8 @@ export type SettingState = {
   maxLoss: string;
   // Bật/tắt giới hạn tổn hao
   maxLossEnabled: boolean;
+  // Bật/tắt dynamic discount (tính chiết khấu theo volatility & momentum)
+  dynamicDiscountEnabled: boolean;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -79,6 +81,7 @@ const storage = createStorage<SettingState>(
     reverseMode: 'profit',
     maxLoss: '10',
     maxLossEnabled: false,
+    dynamicDiscountEnabled: false,
   },
   {
     storageEnum: StorageEnum.Local,

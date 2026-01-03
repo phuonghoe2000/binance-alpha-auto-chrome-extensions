@@ -494,6 +494,39 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
     }
   });
 };
+
+// Lấy số tiền sẽ bán (từ input limitTotal trong panel bán)
+export const getSellAmount = async (tab: chrome.tabs.Tab): Promise<number> => {
+  await injectDependencies(tab);
+  const result = await callChromeJs(tab, [], async () => {
+    try {
+      const input = document.querySelector(
+        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
+      ) as HTMLInputElement;
+      if (!input) return { error: '', val: 0 };
+
+      const parseLocaleNumber = (s: string) => {
+        if (s == null) return NaN;
+        let v = String(s).trim();
+        if (v.indexOf('.') !== -1 && v.indexOf(',') !== -1) {
+          v = v.replace(/\./g, '').replace(',', '.');
+        } else if (v.indexOf(',') !== -1) {
+          v = v.replace(',', '.');
+        }
+        v = v.replace(/[^0-9.\-+eE]/g, '');
+        const n = Number(v);
+        return isFinite(n) ? n : NaN;
+      };
+
+      const numeric = parseLocaleNumber(input.value);
+      return { error: '', val: isFinite(numeric) ? numeric : 0 };
+    } catch {
+      return { error: '', val: 0 };
+    }
+  });
+  return result ?? 0;
+};
+
 // Bán dự phòng
 export const backSell = async (
   tab: chrome.tabs.Tab,
@@ -502,7 +535,8 @@ export const backSell = async (
   appendLog: (msg: string, type: 'success' | 'error' | 'info') => void,
   timeout: number = 3,
   safe: boolean = false,
-) => {
+): Promise<{ sold: boolean; amount: number }> => {
+  let totalSoldAmount = 0;
   while (true) {
     try {
       const checkPrice = await getPrice(symbol, api); // 获取价格
@@ -520,12 +554,16 @@ export const backSell = async (
         safe = false;
         continue;
       }
-      if (!isSell) return;
+      if (!isSell) return { sold: totalSoldAmount > 0, amount: totalSoldAmount };
       // await jumpToSell(tab); // Chuyển sang tab bán
       const price = await getPrice(symbol, api); // Lấy giá
       if (!price) throw new Error('Không thể lấy giá');
       // const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
       const sellPrice = (Number(price) - Number(price) * 0.00006).toString();
+
+      // Lấy số tiền sẽ bán trước khi thực hiện
+      const sellAmount = await getSellAmount(tab);
+
       console.log('Đóng lệnh đảo chiều');
       await closeReverseOrder(tab); // Đóng lệnh đảo chiều
       // Thiết lập giá bán
@@ -543,7 +581,13 @@ export const backSell = async (
       // Chờ lệnh hoàn tất
       await waitOrder(tab, timeout);
       safe = false;
-      appendLog(`Bán thành công: Giá ${sellPrice}`, 'success');
+
+      // Cộng số tiền bán vào tổng
+      if (sellAmount > 0) {
+        totalSoldAmount += sellAmount;
+      }
+
+      appendLog(`Bán thành công: Giá ${sellPrice}, Số tiền: ${sellAmount}`, 'success');
     } catch (error: any) {
       console.error(error);
       appendLog(error.message, 'error');

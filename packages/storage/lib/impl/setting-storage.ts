@@ -40,6 +40,10 @@ export type SettingState = {
   buyPriceIncrease: string;
   // Chế độ đảo chiều: safe (bán thấp hơn) hoặc profit (bán cao hơn)
   reverseMode: 'safe' | 'profit';
+  // Tổn hao tối đa cho phép (USDT) - dừng khi tổn hao >= giá trị này
+  maxLoss: string;
+  // Bật/tắt giới hạn tổn hao
+  maxLossEnabled: boolean;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -73,6 +77,8 @@ const storage = createStorage<SettingState>(
     priceRatio: '0.5',
     buyPriceIncrease: '0.01',
     reverseMode: 'profit',
+    maxLoss: '10',
+    maxLossEnabled: false,
   },
   {
     storageEnum: StorageEnum.Local,

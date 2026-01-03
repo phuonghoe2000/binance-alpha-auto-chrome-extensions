@@ -16,7 +16,6 @@ import {
   setPrice,
   waitOrder,
   startRandom,
-  stopRandom,
 } from '../tool/tool_v1';
 import { useStorage } from '@extension/shared';
 import {
@@ -25,6 +24,7 @@ import {
   StategySettingStorage,
   todayDealStorage,
   todayNoMulDealStorage,
+  scheduleSettingStorage,
 } from '@extension/storage';
 import { Button, cn, Input, Label, RadioGroup, RadioGroupItem } from '@extension/ui';
 import { checkMarketStable } from '@src/tool/strategy';
@@ -198,7 +198,6 @@ export const OrderMode = ({
     await startRandom(tab);
     for (let i = 0; i < runNum; i++) {
       let sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
-      appendLog(`Lượt hiện tại: ${i + 1}`, 'info');
       index++;
       injectDependencies(tab);
 
@@ -206,6 +205,18 @@ export const OrderMode = ({
         appendLog(`Kết thúc bất ngờ`, 'error');
         break;
       }
+
+      // Kiểm tra schedule
+      const scheduleCheck = await scheduleSettingStorage.isWithinSchedule();
+      if (!scheduleCheck.allowed) {
+        appendLog(`⏰ ${scheduleCheck.message}`, 'info');
+        // Chờ 60 giây rồi kiểm tra lại
+        await new Promise(resolve => setTimeout(resolve, 60000));
+        i--; // Không tính lượt này
+        continue;
+      }
+
+      appendLog(`Lượt hiện tại: ${i + 1}`, 'info');
 
       let BuyOk = false;
 
@@ -217,7 +228,18 @@ export const OrderMode = ({
         // Kiểm tra xem có lệnh nào chưa hủy không
         await cancelOrder(tab);
         // 兜底卖出
-        await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
+        const backSellResult = await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
+
+        // Nếu backSell bán thành công, cộng vào khối lượng giao dịch trong ngày
+        if (backSellResult.sold && backSellResult.amount > 0) {
+          const day = dayjs().utc().format('YYYY-MM-DD');
+          todayNoMulDealStorage.setVal(day, backSellResult.amount.toString());
+          todayDealStorage.setVal(day, (backSellResult.amount * mul).toString());
+          appendLog(
+            `BackSell cộng khối lượng: ${backSellResult.amount} (tính điểm: ${backSellResult.amount * mul})`,
+            'info',
+          );
+        }
 
         BuyOk = false;
 
@@ -229,6 +251,22 @@ export const OrderMode = ({
         appendLog(`Làm mới số dư: ${balance}`, 'info');
 
         setCurrentBalance(balance);
+
+        setNum(Date.now());
+
+        // Kiểm tra giới hạn tổn hao (priority cao hơn khối lượng tính điểm)
+        const currentSetting = await settingStorage.get();
+        if (currentSetting.maxLossEnabled) {
+          const balanceNum = Number(balance.toString().replace(/,/g, ''));
+          const startBalanceNum = Number((startBalance ?? '').toString().replace(/,/g, ''));
+          const currentLoss = startBalanceNum - balanceNum;
+          const maxLossLimit = Number(currentSetting.maxLoss || '10');
+
+          if (isFinite(currentLoss) && currentLoss >= maxLossLimit && currentLoss < 100) {
+            appendLog(`⚠️ Tổn hao đã đạt ${currentLoss.toFixed(2)}U >= ${maxLossLimit}U, dừng giao dịch`, 'error');
+            break;
+          }
+        }
 
         // Quay lại bảng mua
         // await jumpToBuy(tab);
@@ -308,7 +346,13 @@ export const OrderMode = ({
 
         await new Promise(resolve => setTimeout(resolve, sleepTime));
 
-        await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
+        const sellResult = await backSell(tab, api, symbol, appendLog, timeout, BuyOk);
+
+        // Nếu backSell bán thành công, cộng thêm vào khối lượng
+        if (sellResult.sold && sellResult.amount > 0) {
+          todayNoMulDealStorage.setVal(day, sellResult.amount.toString());
+          todayDealStorage.setVal(day, (sellResult.amount * mul).toString());
+        }
 
         sleepTime = Math.floor(Math.random() * (maxSleep - minSleep + 1) + minSleep) * 1000;
 
@@ -344,7 +388,14 @@ export const OrderMode = ({
     // Kiểm tra xem có lệnh nào chưa hủy không
     await cancelOrder(tab);
     // Bán dự phòng
-    await backSell(tab, api, symbol, appendLog, timeout);
+    const finalSellResult = await backSell(tab, api, symbol, appendLog, timeout);
+
+    // Nếu bán dự phòng cuối cùng thành công, cộng khối lượng
+    if (finalSellResult.sold && finalSellResult.amount > 0) {
+      const day = dayjs().utc().format('YYYY-MM-DD');
+      todayNoMulDealStorage.setVal(day, finalSellResult.amount.toString());
+      todayDealStorage.setVal(day, (finalSellResult.amount * mul).toString());
+    }
 
     balance = await getBalance(tab);
 

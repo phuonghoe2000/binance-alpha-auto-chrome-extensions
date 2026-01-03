@@ -6,7 +6,13 @@ import { getBalance, injectDependencies } from './tool/tool_v1';
 import { isNewerVersion } from './tool/version';
 import { useLogger } from './useLogger';
 import { useStorage, withErrorBoundary, withSuspense } from '@extension/shared';
-import { settingStorage, StategySettingStorage, todayDealStorage, todayNoMulDealStorage } from '@extension/storage';
+import {
+  settingStorage,
+  StategySettingStorage,
+  todayDealStorage,
+  todayNoMulDealStorage,
+  scheduleSettingStorage,
+} from '@extension/storage';
 import {
   Button,
   ChevronsUpDown,
@@ -21,6 +27,7 @@ import {
   RadioGroup,
   RadioGroupItem,
   Scan,
+  Switch,
   Tabs,
   TabsContent,
   TabsList,
@@ -39,6 +46,7 @@ const Popup = () => {
   const [num, setNum] = useState(0);
   const setting = useStorage(settingStorage);
   const strategy = useStorage(StategySettingStorage);
+  const schedule = useStorage(scheduleSettingStorage);
   const deal = useStorage(todayDealStorage);
   const noMulDeal = useStorage(todayNoMulDealStorage);
 
@@ -288,6 +296,41 @@ const Popup = () => {
             </div>
           )}
 
+          {/* Giới hạn tổn hao */}
+          <div className="mb-4 rounded-md border border-orange-200 bg-orange-50 p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="text-sm font-semibold text-orange-700">⚠️ Giới hạn tổn hao</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="maxLoss-enabled" className="text-xs">
+                  {setting.maxLossEnabled ? 'Bật' : 'Tắt'}
+                </Label>
+                <Switch
+                  id="maxLoss-enabled"
+                  disabled={runing}
+                  checked={setting.maxLossEnabled ?? false}
+                  onCheckedChange={checked => settingStorage.setVal({ maxLossEnabled: checked })}
+                />
+              </div>
+            </div>
+            {setting.maxLossEnabled && (
+              <div className="flex items-center gap-3">
+                <Label htmlFor="maxLoss" className="w-32 flex-none text-xs">
+                  Tổn hao tối đa (USDT)
+                </Label>
+                <Input
+                  type="text"
+                  id="maxLoss"
+                  disabled={runing}
+                  className="w-24"
+                  placeholder="10"
+                  defaultValue={setting.maxLoss ?? '10'}
+                  onChange={e => settingStorage.setVal({ maxLoss: e.target.value ?? '10' })}
+                />
+                <span className="text-xs text-orange-600">Dừng khi tổn hao ≥ giá trị này</span>
+              </div>
+            )}
+          </div>
+
           <div className="mb-4 flex w-full max-w-sm items-center justify-between gap-3">
             <Label htmlFor="runNum" className="w-28 flex-none">
               Độ trễ ngẫu nhiên (s)
@@ -342,6 +385,69 @@ const Popup = () => {
                 onChange={e => settingStorage.setVal({ priceRatio: e.target.value ?? '' })}
               />
             </div>
+          </div>
+
+          {/* Schedule Settings */}
+          <div className="mb-4 rounded-md border border-slate-200 bg-white p-3">
+            <div className="mb-2 flex items-center justify-between">
+              <Label className="text-sm font-semibold">⏰ Lịch trình chạy</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="schedule-enabled" className="text-xs">
+                  {schedule.enabled ? 'Bật' : 'Tắt'}
+                </Label>
+                <Switch
+                  id="schedule-enabled"
+                  disabled={runing}
+                  checked={schedule.enabled}
+                  onCheckedChange={checked => scheduleSettingStorage.setVal({ enabled: checked })}
+                />
+              </div>
+            </div>
+            {schedule.enabled && (
+              <div className="flex flex-col gap-2">
+                <div className="flex items-center gap-3">
+                  <Label htmlFor="startTime" className="w-24 flex-none text-xs">
+                    Bắt đầu
+                  </Label>
+                  <Input
+                    type="time"
+                    id="startTime"
+                    disabled={runing}
+                    className="w-28"
+                    value={schedule.startTime}
+                    onChange={e => scheduleSettingStorage.setVal({ startTime: e.target.value })}
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <Label htmlFor="endTime" className="w-24 flex-none text-xs">
+                    Kết thúc
+                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Input
+                      type="time"
+                      id="endTime"
+                      disabled={runing}
+                      className="w-28"
+                      value={schedule.endTime}
+                      onChange={e => scheduleSettingStorage.setVal({ endTime: e.target.value })}
+                    />
+                    {schedule.endTime && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        disabled={runing}
+                        className="h-8 px-2 text-xs"
+                        onClick={() => scheduleSettingStorage.setVal({ endTime: '' })}>
+                        Xóa
+                      </Button>
+                    )}
+                  </div>
+                </div>
+                <div className="text-xs text-slate-500">
+                  💡 Để trống "Kết thúc" nếu muốn chạy không giới hạn sau giờ bắt đầu
+                </div>
+              </div>
+            )}
           </div>
 
           <Collapsible open={isOpen} onOpenChange={setIsOpen} className="mb-4 flex w-full flex-col">

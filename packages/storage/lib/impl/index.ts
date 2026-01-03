@@ -5,3 +5,4 @@ export * from './order-setting-storage.js';
 export * from './bicycle-setting.storage.js';
 export * from './today-no-mul-deal-storage.js';
 export * from './strategy-setting-storage.js';
+export * from './schedule-setting-storage.js';

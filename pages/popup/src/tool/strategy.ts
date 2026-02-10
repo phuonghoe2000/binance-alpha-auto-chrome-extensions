@@ -1,5 +1,5 @@
 // =====================
-// Binance K线响应类型
+// Kiểu phản hồi K-line của Binance
 
 import type { StategySettingStateType } from '@extension/storage';
 
@@ -13,23 +13,23 @@ export interface AlphaKlineResponse {
 }
 
 // =====================
-// 市场稳定性返回类型
+// Kiểu kết quả ổn định thị trường
 // =====================
 export interface MarketStabilityResult {
   symbol: string;
-  stable: boolean; // 是否可刷分
-  trend: '上涨趋势' | '下跌趋势' | '横盘震荡';
-  message: string; // 可读提示
+  stable: boolean; // Có thể cày điểm hay không
+  trend: 'uptrend' | 'downtrend' | 'sideways';
+  message: string; // Thông báo dễ đọc
 }
 
-// 提取 close
+// Lấy giá đóng cửa
 export const extractClosePrices = (klines: string[][]) => klines.map(k => parseFloat(k[4]));
 
 /**
- * 算法1：线性趋势斜率检测（线性回归简化版）
- * 最近20根收盘价的斜率 > 0 即认为上涨趋势明显
+ * Thuật toán 1: Kiểm tra độ dốc xu hướng tuyến tính (phiên bản đơn giản của hồi quy tuyến tính)
+ * Độ dốc của 20 giá đóng cửa gần nhất > 0 thì coi là xu hướng tăng rõ rệt
  */
-export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000003): boolean => {
+export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000004): boolean => {
   const data = extractClosePrices(klines);
   if (data.length < 5) return false;
   const n = data.length;
@@ -42,27 +42,33 @@ export const algo1_TrendSlope = (klines: string[][], toSlope = 0.000003): boolea
     den += Math.pow(i - avgX, 2);
   }
   const slope = num / den;
-  console.log(slope);
-  return slope > toSlope; // 正斜率代表上涨
+  // Debug slope
+  // console.log('Slope:', slope);
+
+  // Thêm điều kiện: giá hiện tại phải cao hơn giá trung bình
+
+  return slope > toSlope; // Độ dốc dương đại diện cho xu hướng tăng
 };
 
 /**
- * 算法2：动量连续上升检测
- * 连续数根k线收盘价高于前一根，判定为动量上涨
+ * Thuật toán 2: Kiểm tra đà tăng liên tục
+ * Nhiều nến có giá đóng cửa cao hơn nến trước đó → đà tăng
  */
-export const algo2_Momentum = (klines: string[][], confirm = 3): boolean => {
+export const algo2_Momentum = (klines: string[][], confirm = 2): boolean => {
   const data = extractClosePrices(klines);
   if (data.length < confirm + 1) return false;
+
   let count = 0;
+
   for (let i = data.length - confirm; i < data.length; i++) {
     if (data[i] > data[i - 1]) count++;
   }
-  return count >= confirm; // 连涨 confirm 根
+  return count >= confirm;
 };
 
 /**
- * 算法3：短期均线与长期均线方向差异
- * 均线方向差 > 阈值说明加速上行
+ * Thuật toán 3: So sánh hướng đường trung bình ngắn hạn và dài hạn
+ * Chênh lệch hướng > ngưỡng thể hiện xu hướng tăng tốc
  */
 export const algo3_ShortVsLong = (klines: string[][], short = 5, long = 20) => {
   const data = extractClosePrices(klines);
@@ -72,29 +78,39 @@ export const algo3_ShortVsLong = (klines: string[][], short = 5, long = 20) => {
   const longNow = ma(data, long);
   const prevShort = ma(data.slice(0, -1), short);
   const prevLong = ma(data.slice(0, -1), long);
+
+  // Tính độ dốc
   const shortSlope = shortNow - prevShort;
   const longSlope = longNow - prevLong;
+
+  // Yêu cầu (conservative):
+  // 1. MA ngắn hạn tăng nhanh hơn MA dài hạn
+  // 2. MA ngắn hạn đang tăng
+  // 3. Khoảng cách giữa 2 MA > 0.05%
   return shortSlope > longSlope && shortSlope > 0;
 };
 
 /**
- * 算法4：波动率收敛突破（低波动后上破）
- * 若波动率近期降低且最新价格突破区间上限 → 买入
+ * Thuật toán 4: Biến động hội tụ rồi bứt phá (sau giai đoạn biến động thấp)
+ * Nếu biến động gần đây giảm và giá mới nhất vượt biên trên → tín hiệu mua
  */
-export const algo4_VolatilityBreak = (klines: string[][], lookback = 20) => {
+export const algo4_VolatilityBreak = (klines: string[][], lookback = 10) => {
   const data = extractClosePrices(klines);
   if (data.length < lookback) return false;
   const recent = data.slice(-lookback);
   const avg = recent.reduce((a, b) => a + b, 0) / lookback;
   const vol = Math.sqrt(recent.map(p => (p - avg) ** 2).reduce((a, b) => a + b, 0) / lookback);
-  const upper = avg + vol * 1.2;
+
+  // Conservative: dùng lookback lớn hơn và multiplier 1.2
+  const upper = avg + vol * 1.1;
   const curr = recent[recent.length - 1];
+
   return curr > upper;
 };
 
 /**
- * 算法5：即时加速度检测
- * 连续上涨且涨幅递增，表示加速度上行
+ * Thuật toán 5: Kiểm tra gia tốc tức thời
+ * Tăng liên tục và biên độ tăng lớn dần → gia tốc đi lên
  */
 // export const algo5_Acceleration = (klines: string[][], lookback = 10) => {
 //   const data = extractClosePrices(klines);
@@ -131,18 +147,24 @@ export const algo4_VolatilityBreak = (klines: string[][], lookback = 20) => {
 export const algo5_Acceleration = (klines: string[][]) => {
   const data = extractClosePrices(klines);
   if (data.length < 4) return false;
+
   const a1 = data[data.length - 1] - data[data.length - 2];
   const a2 = data[data.length - 2] - data[data.length - 3];
   const a3 = data[data.length - 3] - data[data.length - 4];
+
+  // Yêu cầu (conservative):
+  // 1. Tốc độ tăng tăng dần
+  // 2. Biên độ tăng gần nhất > 0.02%
+  // 3. Tất cả các biến động đều dương
   return a1 > a2 && a2 > a3 && a1 > 0;
 };
 
 /**
- * 统一分析输出
+ * Trả về kết quả phân tích hợp nhất
  */
 export const analyzeFast = (
   klines: string[][],
-  toSlope = 0.000003,
+  toSlope = 0.000004,
   confirm = 3,
   short = 5,
   long = 20,
@@ -154,6 +176,148 @@ export const analyzeFast = (
   VolatilityBreak: algo4_VolatilityBreak(klines, lookback),
   Acceleration: algo5_Acceleration(klines),
 });
+
+// =====================
+// Dynamic Discount Strategy
+// =====================
+
+export interface DynamicDiscountResult {
+  discount: number; // % discount tính được
+  confidence: 'high' | 'medium' | 'low'; // Độ tin cậy
+  volatility: number; // % biến động
+  momentum: number; // % momentum (tốc độ tăng)
+  message: string;
+}
+
+/**
+ * Tính toán discount động dựa trên volatility và momentum của giao dịch gần đây
+ *
+ * Logic:
+ * - Volatility cao + momentum mạnh → discount cao hơn (có thể đặt giá bán xa hơn)
+ * - Volatility thấp + momentum yếu → discount thấp hơn (đặt giá bán gần hơn để chắc chắn khớp)
+ *
+ * @param api - API endpoint
+ * @param symbol - Symbol giao dịch
+ * @param minDiscount - Discount tối thiểu (%)
+ * @param maxDiscount - Discount tối đa (%)
+ * @param limit - Số nến K-line để phân tích
+ */
+export const calculateDynamicDiscount = async (
+  api: string,
+  symbol: string,
+  minDiscount: number = 0.2,
+  maxDiscount: number = 0.5,
+  limit: number = 30,
+): Promise<DynamicDiscountResult> => {
+  api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
+  const url = `${api}/bapi/defi/v1/public/alpha-trade/klines?interval=1s&limit=${limit}&symbol=${symbol}`;
+
+  try {
+    const res = await fetch(url);
+    const json: AlphaKlineResponse = await res.json();
+
+    if (!json.success || !Array.isArray(json.data) || json.data.length < 10) {
+      return {
+        discount: (minDiscount + maxDiscount) / 2,
+        confidence: 'low',
+        volatility: 0,
+        momentum: 0,
+        message: 'Không đủ dữ liệu, dùng discount trung bình',
+      };
+    }
+
+    const closes = extractClosePrices(json.data);
+    const n = closes.length;
+
+    // 1. Tính Volatility (độ biến động) - sử dụng Standard Deviation
+    const avgPrice = closes.reduce((a, b) => a + b, 0) / n;
+    const variance = closes.reduce((sum, p) => sum + Math.pow(p - avgPrice, 2), 0) / n;
+    const stdDev = Math.sqrt(variance);
+    const volatilityPct = (stdDev / avgPrice) * 100; // % biến động
+
+    // 2. Tính Momentum (tốc độ tăng giá) - % thay đổi từ đầu đến cuối
+    const firstPrice = closes[0];
+    const lastPrice = closes[n - 1];
+    const momentumPct = ((lastPrice - firstPrice) / firstPrice) * 100;
+
+    // 3. Tính Average True Range (ATR) đơn giản - khoảng biến động trung bình
+    let atrSum = 0;
+    for (let i = 1; i < n; i++) {
+      atrSum += Math.abs(closes[i] - closes[i - 1]);
+    }
+    // ATR có thể dùng trong tương lai
+    void atrSum;
+
+    // 4. Tính momentum gần nhất (5 nến cuối)
+    const recentMomentum = n >= 5 ? ((closes[n - 1] - closes[n - 5]) / closes[n - 5]) * 100 : momentumPct;
+
+    // 5. Tính discount dựa trên các chỉ số
+    // - Nếu volatility cao + momentum dương mạnh → discount cao (có thể đặt giá xa)
+    // - Nếu volatility thấp hoặc momentum âm → discount thấp (đặt giá gần để an toàn)
+
+    let discountScore = 0;
+
+    // Điểm từ volatility (0-40%)
+    // Volatility cao = có nhiều cơ hội giá dao động
+    const volScore = Math.min(volatilityPct * 100, 40); // Cap at 40
+    discountScore += volScore;
+
+    // Điểm từ momentum (0-40%)
+    // Momentum dương mạnh = giá đang tăng, có thể đặt discount cao
+    if (momentumPct > 0) {
+      discountScore += Math.min(momentumPct * 20, 40);
+    } else {
+      // Momentum âm = giá đang giảm, giảm discount
+      discountScore += Math.max(momentumPct * 10, -20);
+    }
+
+    // Điểm từ recent momentum (0-20%)
+    if (recentMomentum > 0) {
+      discountScore += Math.min(recentMomentum * 10, 20);
+    }
+
+    // Normalize score to 0-100
+    discountScore = Math.max(0, Math.min(100, discountScore));
+
+    // Map score to discount range
+    const discountRange = maxDiscount - minDiscount;
+    const calculatedDiscount = minDiscount + (discountScore / 100) * discountRange;
+
+    // Xác định confidence
+    let confidence: 'high' | 'medium' | 'low';
+    if (momentumPct > 0.1 && volatilityPct > 0.05 && recentMomentum > 0) {
+      confidence = 'high';
+    } else if (momentumPct > 0 && recentMomentum >= 0) {
+      confidence = 'medium';
+    } else {
+      confidence = 'low';
+    }
+
+    // Nếu confidence thấp, giảm discount để an toàn
+    let finalDiscount = calculatedDiscount;
+    if (confidence === 'low') {
+      finalDiscount = minDiscount + (calculatedDiscount - minDiscount) * 0.5;
+    } else if (confidence === 'medium') {
+      finalDiscount = minDiscount + (calculatedDiscount - minDiscount) * 0.75;
+    }
+
+    return {
+      discount: Math.round(finalDiscount * 1000) / 1000, // Round to 3 decimal places
+      confidence,
+      volatility: Math.round(volatilityPct * 10000) / 10000,
+      momentum: Math.round(momentumPct * 10000) / 10000,
+      message: `Vol: ${volatilityPct.toFixed(4)}%, Mom: ${momentumPct.toFixed(4)}%, Recent: ${recentMomentum.toFixed(4)}%`,
+    };
+  } catch {
+    return {
+      discount: (minDiscount + maxDiscount) / 2,
+      confidence: 'low',
+      volatility: 0,
+      momentum: 0,
+      message: 'Lỗi khi tính discount, dùng giá trị trung bình',
+    };
+  }
+};
 
 export const checkMarketStable = async (
   api: string,
@@ -167,25 +331,50 @@ export const checkMarketStable = async (
   const json: AlphaKlineResponse = await res.json();
 
   if (!json.success || !Array.isArray(json.data)) {
-    throw new Error(`获取 ${symbol} 市场数据失败`);
+    throw new Error(`Không thể lấy dữ liệu thị trường ${symbol}`);
   }
 
   const data = json.data;
 
   const a = analyzeFast(data, options.toSlope, options.confirm, options.short, options.long, options.limit);
-  // 可刷分判断
-  const stable = a.TrendSlope || a.Momentum || a.ShortVsLong || a.VolatilityBreak || a.Acceleration;
 
-  // 如果有两个指标以上为true，则判定为上涨趋势
+  // Đếm số algo đúng
   const trueCount = [a.TrendSlope, a.Momentum, a.ShortVsLong, a.VolatilityBreak, a.Acceleration].filter(
     (v: boolean) => v,
   ).length;
 
-  const trend = trueCount >= options.upThreshold ? '上涨趋势' : '下跌趋势';
+  // Check downtrend protection: giá hiện tại < MA dài hạn
+  const closes = extractClosePrices(data);
+  const currentPrice = closes[closes.length - 1];
+  const maLong = closes.slice(-options.long).reduce((a, b) => a + b, 0) / options.long;
+  const isDowntrend = currentPrice < maLong * 0.998; // Giá thấp hơn MA 0.2%
 
-  const message = stable
-    ? `✅ 可交易 (线性趋势斜率检测: ${a.TrendSlope}; 动量连续上升检测: ${a.Momentum}; 短期均线与长期均线方向差异: ${a.ShortVsLong}; 波动率收敛突破: ${a.VolatilityBreak}; 即时加速度检测: ${a.Acceleration})`
-    : `❌ 不可交易 (线性趋势斜率检测: ${a.TrendSlope}; 动量连续上升检测: ${a.Momentum}; 短期均线与长期均线方向差异: ${a.ShortVsLong}; 波动率收敛突破: ${a.VolatilityBreak}; 即时加速度检测: ${a.Acceleration})`;
+  // Đánh giá có thể cày điểm hay không - theo từng mode
+  const mode = options.strategyMode || 'balanced';
+  let stable = false;
+  let modeDesc = '';
+
+  switch (mode) {
+    case 'conservative':
+      // Conservative: ≥3 algo đúng VÀ không downtrend
+      stable = trueCount >= 3 && !isDowntrend;
+      modeDesc = `[Conservative] ${trueCount}/5 algo, downtrend=${isDowntrend}`;
+      break;
+    case 'balanced':
+      // Balanced: ≥2 algo đúng VÀ không downtrend mạnh
+      stable = trueCount >= 2 && !isDowntrend;
+      modeDesc = `[Balanced] ${trueCount}/5 algo, downtrend=${isDowntrend}`;
+      break;
+    case 'aggressive':
+      // Aggressive: ≥1 algo đúng (giữ nguyên logic cũ)
+      stable = trueCount >= 1;
+      modeDesc = `[Aggressive] ${trueCount}/5 algo`;
+      break;
+  }
+
+  const trend = trueCount >= options.upThreshold ? 'uptrend' : 'downtrend';
+
+  const message = stable ? `✅ Có thể giao dịch - ${modeDesc}` : `❌ Không thể giao dịch - ${modeDesc}`;
 
   return {
     symbol,

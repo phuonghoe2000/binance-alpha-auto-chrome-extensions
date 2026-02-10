@@ -42,7 +42,7 @@ export const injectDependencies = async (tab: chrome.tabs.Tab) => {
         };
       };
 
-      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 10, maxDelay = 30) => {
+      window.humanType = async (input: HTMLInputElement, text: string, minDelay = 3, maxDelay = 8) => {
         const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
 
         input.focus();
@@ -163,7 +163,7 @@ export const callChromeJs = async <T, A extends any[] = []>(
   });
 
   if (!result?.result) {
-    throw new Error('脚本执行失败：无返回结果');
+    throw new Error('Chạy script thất bại: không có kết quả trả về');
   }
 
   const { error, val } = result.result;
@@ -175,7 +175,7 @@ export const callChromeJs = async <T, A extends any[] = []>(
   return val;
 };
 
-// 获取alpha 接口id
+// Lấy ID giao diện alpha
 export const getId = async (tab: chrome.tabs.Tab, api: string) => {
   const name = await callChromeJs(tab, [], () => {
     try {
@@ -195,13 +195,13 @@ export const getId = async (tab: chrome.tabs.Tab, api: string) => {
 };
 
 export interface Trade {
-  T: number; // 时间戳
-  p: string; // 价格
-  q: string; // 成交量
-  m: boolean; // 是否卖方主动
+  T: number; // Dấu thời gian
+  p: string; // Giá
+  q: string; // Khối lượng giao dịch
+  m: boolean; // Bên bán chủ động hay không
 }
 
-// 获取价格
+// Lấy giá
 export const getPrice = async (symbol: string, api: string) => {
   api = api.lastIndexOf('/') === api.length - 1 ? api.slice(0, -1) : api;
   const request = await fetch(
@@ -260,6 +260,7 @@ export const jumpToBuy = async (tab: chrome.tabs.Tab) =>
 
 export const setPrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
+  price = price.replace('.', ',');
   return await callChromeJs(tab, [price], async price => {
     try {
       const setValue = async (selector: string | HTMLInputElement, value: string) => {
@@ -316,11 +317,11 @@ export const setLimitTotal = async (tab: chrome.tabs.Tab, value: string) => {
   });
 };
 
-// 提交卖出
+// Gửi lệnh bán
 export const callSubmit = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], async () => {
     try {
-      // 确认卖出
+      // Xác nhận bán
       const submitBtn = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button.bn-button',
       ) as HTMLButtonElement;
@@ -328,7 +329,7 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
       await window.dispatchMouseEvent(submitBtn);
 
       let click = false;
-      // 关闭弹窗
+      // Đóng hộp thoại
       let count = 0;
       // 1000 / 30 每秒30fps 最多等待1秒
       while (count < 10) {
@@ -350,7 +351,7 @@ export const callSubmit = async (tab: chrome.tabs.Tab) =>
         }
         count++;
       }
-      return { error: '操作超时，刷新页面后重试', val: true };
+      return { error: 'Thao tác quá thời gian, hãy làm mới trang rồi thử lại', val: true };
     } catch (error: any) {
       return { error: error.message, val: true };
     }
@@ -363,12 +364,12 @@ export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] button[class="bn-button bn-button__buy data-size-middle w-full"]',
       ) as HTMLButtonElement;
       if (!btn) {
-        throw new Error('买入按钮不存在, 刷新页面, 请确认页面是否正确');
+        throw new Error('Không tìm thấy nút mua, hãy làm mới trang và kiểm tra trang có chính xác không');
       }
       await window.dispatchMouseEvent(btn);
       // 关闭弹窗
       let count = 0;
-      // 1000 / 30 每秒30fps 最多等待1秒
+      // 1000 / 30: 30fps mỗi giây, tối đa chờ 1 giây
       while (count < 32) {
         await new Promise(resolve => setTimeout(resolve, 1000 / 30));
         const btn = document
@@ -382,30 +383,30 @@ export const callBuySubmit = async (tab: chrome.tabs.Tab) =>
         }
         count++;
       }
-      return { error: '操作超时，刷新页面后重试', val: true };
+      return { error: 'Thao tác quá thời gian, hãy làm mới trang rồi thử lại', val: true };
     } catch (error: any) {
       return { error: error.message, val: false };
     }
   });
 
-// 等待订单完成
+// Chờ lệnh hoàn tất
 export const waitOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
   await callChromeJs(tab, [timeout], async timeout => {
     try {
       await new Promise(resolve => setTimeout(resolve, 1000));
       const start = Date.now();
       while (true) {
-        // 获取订单
+        // Lấy danh sách lệnh
         const orderList = Array.from(document.querySelectorAll('#bn-tab-pane-orderOrder .bn-web-table-row'));
         if (orderList.length === 0) break;
-        // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
+        // Nếu tồn tại và quá thời gian thì hủy, đồng thời trả về trạng thái quá hạn (đơn vị timeout là giây)
         if (Date.now() - start > timeout * 1000) {
           orderList.forEach(async order => {
             const el = order.querySelector('td[aria-colindex="10"] svg')!;
             await window.dispatchMouseEvent(el);
           });
           await new Promise(resolve => setTimeout(resolve, 500));
-          return { error: '等待订单超时，等待重试', val: true };
+          return { error: 'Chờ lệnh quá thời gian, chờ và thử lại', val: true };
         }
         await new Promise(resolve => setTimeout(resolve, 300));
       }
@@ -415,7 +416,7 @@ export const waitOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
     }
   });
 
-// 是否出现验证弹窗
+// Có xuất hiện hộp thoại xác thực hay không
 export const isAuthModal = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], () => {
     try {
@@ -436,7 +437,7 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
     try {
       const sellPanel = document.querySelector('.bn-tab__buySell[aria-controls="bn-tab-pane-1"]') as HTMLButtonElement;
       if (!sellPanel) {
-        throw new Error('卖出面板元素不存在, 刷新页面, 请确认页面是否正确');
+        throw new Error('Không tìm thấy phần tử bảng bán, hãy làm mới trang và kiểm tra trang có chính xác không');
       }
       await window.dispatchMouseEvent(sellPanel);
 
@@ -452,25 +453,81 @@ export const getIsSell = async (tab: chrome.tabs.Tab, checkPrice: string) => {
       // const sellPrice = priceEl.textContent.trim();
       const setValue = async (selector: string | HTMLInputElement, value: string) => {
         const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
-        if (!input) throw new Error('input元素不存在');
-        await window.humanType(input as HTMLInputElement, value);
+        if (!input) throw new Error('Phần tử input không tồn tại');
+        const nativeInputValueSetter = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value')!.set!;
+        nativeInputValueSetter.call(input, value);
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+        input.dispatchEvent(new Event('change', { bubbles: true }));
       };
-      await setValue('input#limitPrice', checkPrice);
+      setValue('input#limitPrice', checkPrice.replace('.', ','));
       await new Promise(resolve => setTimeout(resolve, 16));
       await setValue('.flexlayout__tab[data-layout-path="/r1/ts0/t0"] input[type="range"]', '100');
       await new Promise(resolve => setTimeout(resolve, 16));
       const input = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
       ) as HTMLInputElement;
-      if (!input) throw new Error('数量输入框不存在, 刷新页面, 请确认页面是否正确');
-      if (Number(input.value) >= 1) return { error: '', val: true };
+      if (!input)
+        throw new Error('Không tìm thấy ô nhập số lượng, hãy làm mới trang và kiểm tra trang có chính xác không');
+
+      const parseLocaleNumber = (s: string) => {
+        if (s == null) return NaN;
+        let v = String(s).trim();
+        // If both dot and comma present, assume dot is thousand separator and comma is decimal
+        if (v.indexOf('.') !== -1 && v.indexOf(',') !== -1) {
+          v = v.replace(/\./g, '').replace(',', '.');
+        } else if (v.indexOf(',') !== -1) {
+          // Only comma present -> treat comma as decimal separator
+          v = v.replace(',', '.');
+        }
+        // Remove any non numeric characters except decimal point, sign and exponent
+        v = v.replace(/[^0-9.\-+eE]/g, '');
+        const n = Number(v);
+        return isFinite(n) ? n : NaN;
+      };
+
+      const numeric = parseLocaleNumber(input.value);
+      if (!isFinite(numeric)) return { error: '', val: false };
+      if (numeric >= 1) return { error: '', val: true };
       return { error: '', val: false };
     } catch (error: any) {
       return { error: error.message, val: true };
     }
   });
 };
-// 兜底卖出
+
+// Lấy số tiền sẽ bán (từ input limitTotal trong panel bán)
+export const getSellAmount = async (tab: chrome.tabs.Tab): Promise<number> => {
+  await injectDependencies(tab);
+  const result = await callChromeJs(tab, [], async () => {
+    try {
+      const input = document.querySelector(
+        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] #limitTotal',
+      ) as HTMLInputElement;
+      if (!input) return { error: '', val: 0 };
+
+      const parseLocaleNumber = (s: string) => {
+        if (s == null) return NaN;
+        let v = String(s).trim();
+        if (v.indexOf('.') !== -1 && v.indexOf(',') !== -1) {
+          v = v.replace(/\./g, '').replace(',', '.');
+        } else if (v.indexOf(',') !== -1) {
+          v = v.replace(',', '.');
+        }
+        v = v.replace(/[^0-9.\-+eE]/g, '');
+        const n = Number(v);
+        return isFinite(n) ? n : NaN;
+      };
+
+      const numeric = parseLocaleNumber(input.value);
+      return { error: '', val: isFinite(numeric) ? numeric : 0 };
+    } catch {
+      return { error: '', val: 0 };
+    }
+  });
+  return result ?? 0;
+};
+
+// Bán dự phòng
 export const backSell = async (
   tab: chrome.tabs.Tab,
   api: string,
@@ -478,39 +535,59 @@ export const backSell = async (
   appendLog: (msg: string, type: 'success' | 'error' | 'info') => void,
   timeout: number = 3,
   safe: boolean = false,
-) => {
+): Promise<{ sold: boolean; amount: number }> => {
+  let totalSoldAmount = 0;
   while (true) {
     try {
       const checkPrice = await getPrice(symbol, api); // 获取价格
       const isSell = await getIsSell(tab, checkPrice);
       if (!isSell && safe) {
         appendLog('没有发现卖单数据，强制刷新', 'error');
+        await closeReverseOrder(tab); // Đóng lệnh đảo chiều
+        await new Promise(resolve => setTimeout(resolve, 3000));
         await chrome.tabs.reload(tab.id!);
         await new Promise(resolve => setTimeout(resolve, 5000));
+        // Inject lại dependencies sau khi reload
+        await injectDependencies(tab);
+        // Hủy tất cả order còn lại
+        await cancelOrder(tab);
         safe = false;
         continue;
       }
-      if (!isSell) return;
-      // await jumpToSell(tab); // 跳转卖出
-      const price = await getPrice(symbol, api); // 获取价格
-      if (!price) throw new Error('获取价格失败');
+      if (!isSell) return { sold: totalSoldAmount > 0, amount: totalSoldAmount };
+      // await jumpToSell(tab); // Chuyển sang tab bán
+      const price = await getPrice(symbol, api); // Lấy giá
+      if (!price) throw new Error('Không thể lấy giá');
       // const sellPrice = (Number(price) - Number(price) * 0.0001).toString();
       const sellPrice = (Number(price) - Number(price) * 0.00006).toString();
-      await closeReverseOrder(tab); // 关闭反向订单
-      // 设置卖出价格
+
+      // Lấy số tiền sẽ bán trước khi thực hiện
+      const sellAmount = await getSellAmount(tab);
+
+      console.log('Đóng lệnh đảo chiều');
+      await closeReverseOrder(tab); // Đóng lệnh đảo chiều
+      // Thiết lập giá bán
+      console.log('Thiết lập giá bán');
       await setPrice(tab, sellPrice);
-      // 设置卖出数量
+      // Thiết lập số lượng bán
+      console.log('Thiết lập số lượng bán');
       await setRangeValue(tab, '100');
-      // 执行卖出
+      // Thực hiện bán
       await callSubmit(tab);
-      // 判断是否出现验证码
+      // Kiểm tra có xuất hiện mã xác thực hay không
       const isAuth = await isAuthModal(tab);
-      // 出现验证弹窗等待
-      if (isAuth) await new Promise(resolve => setTimeout(resolve, 10000));
-      // 等待订单
+      // Nếu có hộp thoại xác thực thì chờ
+      if (isAuth) await new Promise(resolve => setTimeout(resolve, 30000));
+      // Chờ lệnh hoàn tất
       await waitOrder(tab, timeout);
       safe = false;
-      appendLog(`卖出成功 价格：${sellPrice}`, 'success');
+
+      // Cộng số tiền bán vào tổng
+      if (sellAmount > 0) {
+        totalSoldAmount += sellAmount;
+      }
+
+      appendLog(`Bán thành công: Giá ${sellPrice}, Số tiền: ${sellAmount}`, 'success');
     } catch (error: any) {
       console.error(error);
       appendLog(error.message, 'error');
@@ -525,12 +602,12 @@ export type AggTrade = {
   q: string; // qty as string
   f: number;
   l: number;
-  T: number; // ms timestamp
+  T: number; // Dấu thời gian (ms)
   m?: boolean;
 };
 
 /**
- * 检测从 buyPrice/buyIndex/buyTs 开始到窗口内是否出现超过 thresholdPct 下跌
+ * Kiểm tra từ buyPrice/buyIndex/buyTs đến trong cửa sổ có xuất hiện mức giảm vượt quá thresholdPct hay không
  */
 export const detectDropRisk = (
   trades: AggTrade[],
@@ -549,7 +626,7 @@ export const detectDropRisk = (
     throw new Error('invalid trades');
   }
 
-  // 找到起点索引
+  // Tìm chỉ số bắt đầu
   let startIdx = 0;
   if (typeof buyIndex === 'number') {
     startIdx = Math.max(0, Math.min(trades.length - 1, buyIndex));
@@ -557,11 +634,11 @@ export const detectDropRisk = (
     startIdx = trades.findIndex(t => t.T >= buyTs);
     if (startIdx === -1) startIdx = trades.length - 1;
   } else if (typeof buyPrice === 'number') {
-    // 如果只给了价格，默认从第一个 >= buyPrice 的位置开始（或从 0）
+    // Nếu chỉ có giá, mặc định bắt đầu từ vị trí đầu tiên >= buyPrice (hoặc từ 0)
     startIdx = 0;
   }
 
-  // 计算起始价格
+  // Tính giá bắt đầu
   let startPrice: number;
   if (typeof buyPrice === 'number') {
     startPrice = buyPrice;
@@ -570,11 +647,11 @@ export const detectDropRisk = (
   }
   if (!isFinite(startPrice) || startPrice <= 0) throw new Error('invalid start price');
 
-  // 计算窗口截止时间（基于 startIdx 的时间）
+  // Tính thời điểm kết thúc cửa sổ (dựa trên thời gian của startIdx)
   const startTs = trades[startIdx].T;
   const endTs = startTs + windowMs;
 
-  // 在窗口内找最低价和（可选）低价成交量总和
+  // Tìm giá thấp nhất trong cửa sổ và (tùy chọn) tổng khối lượng ở mức giá thấp
   let minPrice = startPrice;
   let minTrade: AggTrade | null = null;
   let lowPriceVolume = 0;
@@ -591,19 +668,19 @@ export const detectDropRisk = (
       minPrice = price;
       minTrade = t;
     }
-    // 记录低于某个阈（如低于 startPrice * (1 - thresholdPct/100)）的量
+    // Ghi lại khối lượng thấp hơn ngưỡng (ví dụ thấp hơn startPrice * (1 - thresholdPct/100))
     const thresholdPrice = startPrice * (1 - thresholdPct / 100);
     if (price <= thresholdPrice) {
       lowPriceVolume += vol;
     }
   }
 
-  const worstDropPct = ((startPrice - minPrice) / startPrice) * 100; // 百分比
+  const worstDropPct = ((startPrice - minPrice) / startPrice) * 100; // Phần trăm
   const hasRisk = worstDropPct > thresholdPct;
 
   const res = {
     hasRisk,
-    worstDropPct, // 百分比, e.g. 0.056 => 0.056%
+    worstDropPct, // Phần trăm, ví dụ 0.056 => 0.056%
     buyPrice: startPrice,
     minPrice,
     minTrade,
@@ -624,17 +701,27 @@ export const detectDropRisk = (
   return res;
 };
 
-// 获取余额
+// Lấy số dư
 export const getBalance = async (tab: chrome.tabs.Tab) => {
   await jumpToBuy(tab);
   return await callChromeJs(tab, [], async () => {
     try {
-      const UsdtEle = document.querySelector(
-        '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .t-caption1 div[class~="text-PrimaryText"]',
-      ) as HTMLSpanElement;
-      if (!UsdtEle) throw new Error('获取不到余额, 请确认页面是否正确');
-      // 返回余额（字符串）
-      return { error: '', val: UsdtEle.textContent.replace(' USDT', '') };
+      // Tìm element chứa số dư USDT bằng cách tìm text content
+      const allElements = document.querySelectorAll('#__APP div');
+      let UsdtEle: HTMLElement | null = null;
+
+      for (const el of allElements) {
+        const text = el.textContent || '';
+        // Tìm element có text match pattern số + USDT và là leaf node (không có child element chứa USDT)
+        if (/^\d+(\.\d+)?\s*USDT$/.test(text.trim())) {
+          UsdtEle = el as HTMLElement;
+          break;
+        }
+      }
+
+      if (!UsdtEle) throw new Error('Không lấy được số dư, hãy kiểm tra trang có chính xác không');
+      // Trả về số dư (chuỗi)
+      return { error: '', val: UsdtEle.textContent!.replace(/\s*USDT\s*/, '').trim() };
     } catch (error: any) {
       return { error: error.message, val: '' };
     }
@@ -645,53 +732,113 @@ export const checkUnknownModal = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], () => {
     try {
       const modal = document.querySelector(`div[role='dialog'][class='bn-modal-wrap data-size-small']`);
-      if (modal) throw new Error('未知弹窗，刷新页面, 请确认页面是否正确');
+      if (modal) throw new Error('Phát hiện hộp thoại lạ, hãy làm mới trang và kiểm tra trang có chính xác không');
       return { error: '', val: true };
     } catch (error: any) {
       return { error: error.message, val: false };
     }
   });
 
-export const cancelOrder = async (tab: chrome.tabs.Tab) =>
-  await callChromeJs(tab, [], async () => {
-    // 检测是否有订单
-    const cancelAll = document.querySelector(
-      '#bn-tab-pane-orderOrder th[aria-colindex="10"] div[class="text-TextLink cursor-pointer"]',
-    ) as HTMLButtonElement;
-    // 如果不存在则代表未有订单
-    if (cancelAll) {
-      await window.dispatchMouseEvent(cancelAll);
+export const cancelOrder = async (tab: chrome.tabs.Tab, maxRetries = 3) => {
+  for (let retry = 0; retry < maxRetries; retry++) {
+    const result = await callChromeJs(tab, [], async () => {
+      try {
+        // Kiểm tra xem có đơn đặt lệnh hay không - thử nhiều selector
+        const cancelAllSelectors = [
+          '#bn-tab-pane-orderOrder th[aria-colindex="10"] div[class="text-TextLink cursor-pointer"]',
+          '#bn-tab-pane-orderOrder th div[class*="text-TextLink"][class*="cursor-pointer"]',
+          '#bn-tab-pane-orderOrder .text-TextLink.cursor-pointer',
+        ];
 
-      await new Promise(resolve => setTimeout(resolve, 300));
-      // 确认弹窗
-      const btn = document.querySelector(
-        '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
-      ) as HTMLButtonElement;
-      if (btn) {
-        await window.dispatchMouseEvent(btn);
+        let cancelAll: HTMLElement | null = null;
+        for (const selector of cancelAllSelectors) {
+          cancelAll = document.querySelector(selector) as HTMLElement;
+          if (cancelAll) break;
+        }
+
+        // Nếu không có nghĩa là chưa có lệnh
+        if (cancelAll) {
+          await window.dispatchMouseEvent(cancelAll);
+          await new Promise(resolve => setTimeout(resolve, 500));
+
+          // Hộp thoại xác nhận - thử nhiều selector
+          const confirmSelectors = [
+            '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
+            '.bn-modal-confirm button[class*="primary"]',
+            'div[role="dialog"] button[class*="primary"]',
+          ];
+
+          for (const selector of confirmSelectors) {
+            const btn = document.querySelector(selector) as HTMLButtonElement;
+            if (btn) {
+              await window.dispatchMouseEvent(btn);
+              break;
+            }
+          }
+          await new Promise(resolve => setTimeout(resolve, 1500));
+        }
+
+        // Kiểm tra từng order riêng lẻ - sửa selector bị thiếu dấu "
+        const orderSelectors = [
+          '#bn-tab-pane-orderOrder td div[style*="color: var(--color-Buy)"]',
+          '#bn-tab-pane-orderOrder tr[data-row-key] td:last-child svg',
+          '#bn-tab-pane-orderOrder td[aria-colindex="10"] svg',
+        ];
+
+        for (const selector of orderSelectors) {
+          const orderList = Array.from(document.querySelectorAll(selector));
+          if (orderList.length) {
+            // Dùng for...of thay vì forEach để đợi async
+            for (const order of orderList) {
+              await window.dispatchMouseEvent(order);
+              await new Promise(resolve => setTimeout(resolve, 300));
+
+              // Click confirm nếu có
+              for (const confirmSelector of [
+                '.bn-modal-confirm .bn-modal-confirm-actions .bn-button__primary',
+                'div[role="dialog"] button[class*="primary"]',
+              ]) {
+                const confirmBtn = document.querySelector(confirmSelector) as HTMLButtonElement;
+                if (confirmBtn) {
+                  await window.dispatchMouseEvent(confirmBtn);
+                  await new Promise(resolve => setTimeout(resolve, 500));
+                  break;
+                }
+              }
+            }
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        // Kiểm tra còn order không
+        await new Promise(resolve => setTimeout(resolve, 500));
+        const remainingOrders = document.querySelectorAll('#bn-tab-pane-orderOrder tr[data-row-key]');
+        const hasOrders = remainingOrders.length > 0;
+
+        return { error: '', val: true, hasOrders };
+      } catch (error: any) {
+        return { error: error.message, val: false, hasOrders: true };
       }
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    });
+
+    // Nếu không còn order hoặc không có lỗi thì return
+    if (result && !result.hasOrders) {
+      return result;
     }
 
-    const orderList = Array.from(
-      document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);'),
-    );
-    if (orderList.length) {
-      // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
-      orderList.forEach(async order => {
-        const btn = order.querySelector('td[aria-colindex="10"] svg')!;
-        await window.dispatchMouseEvent(btn);
-      });
-      await new Promise(resolve => setTimeout(resolve, 1000));
+    // Nếu còn order, đợi và thử lại
+    if (retry < maxRetries - 1) {
+      await new Promise(resolve => setTimeout(resolve, 2000));
     }
+  }
 
-    return { error: '', val: true };
-  });
+  return { error: '', val: true };
+};
 
 export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], async () => {
     try {
-      // 反向订单校验
+      // Kiểm tra lệnh đảo chiều
       const btn = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
       ) as HTMLButtonElement;
@@ -711,7 +858,7 @@ export const closeReverseOrder = async (tab: chrome.tabs.Tab) =>
 export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
   await callChromeJs(tab, [], async () => {
     try {
-      // 反向订单校验
+      // Kiểm tra lệnh đảo chiều
       const btn = document.querySelector(
         '.flexlayout__tab[data-layout-path="/r1/ts0/t0"] .bn-checkbox',
       ) as HTMLButtonElement;
@@ -729,24 +876,43 @@ export const openReverseOrder = async (tab: chrome.tabs.Tab) =>
   });
 export const setReversePrice = async (tab: chrome.tabs.Tab, price: string) => {
   await injectDependencies(tab);
-  return await callChromeJs(tab, [price], async price => {
-    try {
-      const limitTotals = document.querySelectorAll('input#limitTotal');
-      if (!limitTotals.length || limitTotals.length < 2) throw new Error('反向价格元素不存在, 请确认页面是否正确');
-      const limitTotal = limitTotals[1] as any;
-      const setValue = async (selector: string | HTMLInputElement, value: string) => {
-        const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
-        if (!input) throw new Error('input元素不存在');
-        await window.humanType(input as HTMLInputElement, value);
-      };
-      // 卖出价格
-      await setValue(limitTotal, price);
-      await new Promise(resolve => setTimeout(resolve, 16));
-      return { error: '', val: true };
-    } catch (error: any) {
-      return { error: error.message, val: false };
-    }
-  });
+  price = price.replace('.', ',');
+
+  const trySetPrice = async () =>
+    await callChromeJs(tab, [price], async price => {
+      try {
+        const limitTotals = document.querySelectorAll('input#limitTotal');
+        if (!limitTotals.length || limitTotals.length < 2) {
+          console.log('[setReversePrice] missing-limit-total, cần refresh trang');
+          return { error: '', val: false }; // Return false để trigger reload
+        }
+
+        const limitTotal = limitTotals[1] as any;
+        const setValue = async (selector: string | HTMLInputElement, value: string) => {
+          const input = typeof selector === 'string' ? document.querySelector(selector) : selector;
+          if (!input) throw new Error('input元素不存在');
+          await window.humanType(input as HTMLInputElement, value);
+        };
+        await setValue(limitTotal, price);
+        await new Promise(resolve => setTimeout(resolve, 16));
+        return { error: '', val: true };
+      } catch (error: any) {
+        return { error: error.message, val: false };
+      }
+    });
+
+  // Thử lần đầu
+  if (await trySetPrice()) return true;
+
+  // Không tìm thấy -> refresh trang và thử lại 1 lần
+  console.log('[setReversePrice] Không tìm thấy phần tử, đang refresh trang...');
+  await chrome.tabs.reload(tab.id!);
+  await new Promise(resolve => setTimeout(resolve, 5000));
+  await injectDependencies(tab);
+
+  if (await trySetPrice()) return true;
+
+  throw new Error('Không tìm thấy phần tử giá đảo chiều sau khi thử làm mới trang');
 };
 
 export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
@@ -755,20 +921,20 @@ export const waitBuyOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =>
       await new Promise(resolve => setTimeout(resolve, 1000));
       const start = Date.now();
       while (true) {
-        // 获取订单
+        // Lấy danh sách lệnh
         const orderList = Array.from(
           document.querySelectorAll('#bn-tab-pane-orderOrder td div[style="color: var(--color-Buy);'),
         );
         if (orderList.length === 0) break;
-        // 如果存在 且超时操作取消 并且返回超时 timeout 单位（s）
+        // Nếu tồn tại, quá thời gian thì hủy và trả về trạng thái quá hạn (đơn vị timeout là giây)
         if (Date.now() - start > timeout * 1000) {
           orderList.forEach(async order => {
             const btn = order.parentNode!.parentNode!.querySelector('svg')!;
             await window.dispatchMouseEvent(btn);
           });
-          console.log('等待订单超时，等待重试');
+          console.log('Chờ lệnh quá thời gian, chờ và thử lại');
           await new Promise(resolve => setTimeout(resolve, 500));
-          return { error: '等待订单超时，等待重试', val: true };
+          return { error: 'Chờ lệnh quá thời gian, chờ và thử lại', val: true };
         }
         await new Promise(resolve => setTimeout(resolve, 300));
       }
@@ -796,6 +962,7 @@ export const waitSellOrder = async (tab: chrome.tabs.Tab, timeout: number = 3) =
             await window.dispatchMouseEvent(btn);
           });
           console.log('等待订单超时，等待重试');
+          await closeReverseOrder(tab); // Đóng lệnh đảo chiều
           await new Promise(resolve => setTimeout(resolve, 500));
           return { error: '等待订单超时，等待重试', val: true };
         }
@@ -817,11 +984,11 @@ export const startLoopAuth = async (tab: chrome.tabs.Tab, secret: string, callba
   loop = true;
   console.log('startLoopAuth');
   while (loop) {
-    console.log('二次验证码检测中...');
+    console.log('Đang kiểm tra mã xác thực lần hai...');
     await new Promise(resolve => setTimeout(resolve, 300));
     await checkAuthModal(tab, secret).catch((err: { message: string }) => {
       console.error('startLoopAuth', err.message);
-      if (err.message.includes('停止')) {
+      if (err.message.includes('\u505c\u6b62') || err.message.includes('dừng')) {
         callback(true);
       }
     });
@@ -830,7 +997,7 @@ export const startLoopAuth = async (tab: chrome.tabs.Tab, secret: string, callba
 
 export const getCode = (secret: string) => (window as any).otplib.authenticator.generate(secret);
 
-// 获取是否出现验证码弹窗
+// Kiểm tra có xuất hiện hộp thoại xác thực hay không
 export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
   const isModal = await chrome.scripting.executeScript({
     target: { tabId: tab.id! },
@@ -848,7 +1015,7 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
     if (!secret) throw new Error('出现验证码，但是未设置，自动停止');
     await new Promise(resolve => setTimeout(resolve, 3000));
     const code = getCode(secret);
-    if (!code) throw new Error('出现验证码，但获取验证码失败，自动停止');
+    if (!code) throw new Error('Phát hiện mã xác thực nhưng lấy mã thất bại, tự động dừng');
     const results = await chrome.scripting.executeScript({
       target: { tabId: tab.id! },
       args: [code],
@@ -858,10 +1025,10 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
           const dialog = document.querySelector('#mfa-shadow-host');
           if (dialog) {
             const root = dialog.shadowRoot;
-            if (!root) throw new Error('验证失败，自动停止');
+            if (!root) throw new Error('Xác minh thất bại, tự động dừng');
             const textContent = root.querySelector('.mfa-security-page-title')?.textContent;
-            // 获取是否生物验证
-            if (textContent === '通过通行密钥验证' || textContent === 'Verify with passkey') {
+            // Kiểm tra có phải xác thực sinh trắc hay không
+            if (textContent === 'Xác minh bằng khóa thông hành' || textContent === 'Verify with passkey') {
               const btn = root.querySelector('.bidscls-btnLink2') as HTMLButtonElement;
               if (btn) {
                 // 跳转二次验证
@@ -870,15 +1037,15 @@ export const checkAuthModal = async (tab: chrome.tabs.Tab, secret: string) => {
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
             const steps = root.querySelectorAll('.bn-mfa-overview-step-title');
-            const sfzapp = Array.from(steps).find(c => c.innerHTML.includes('身份验证')) as HTMLButtonElement;
+            const sfzapp = Array.from(steps).find(c => c.innerHTML.includes('xác minh danh tính')) as HTMLButtonElement;
             if (sfzapp) {
               await window.dispatchMouseEvent(sfzapp);
               await new Promise(resolve => setTimeout(resolve, 1000));
             }
-            // 判断是否是身份验证器
+            // Kiểm tra có phải ứng dụng xác minh danh tính hay không
             const checkText = root.querySelector('.bn-formItem-label')?.textContent?.trim();
-            if (checkText === '身份验证器App' || checkText === 'Verification code') {
-              // 查找input
+            if (checkText === 'Ứng dụng xác minh danh tính' || checkText === 'Verification code') {
+              // Tìm input
               const input = root.querySelector('.bn-textField-input') as any;
               const value = code;
 

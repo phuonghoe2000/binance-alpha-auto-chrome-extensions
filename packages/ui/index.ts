@@ -13,3 +13,5 @@ export * from './lib/components/ui/tabs';
 export * from 'lucide-react';
 
 export * from './lib/components/ui/collapsible';
+
+export * from './lib/components/ui/switch';

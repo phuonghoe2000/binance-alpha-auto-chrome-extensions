@@ -6,7 +6,7 @@ import type { BaseStorageType } from '../base/index.js';
 export type SettingState = {
   amount: string;
   timeout: string;
-  // 上限方式
+  // Cách đặt giới hạn
   runType: 'sum' | 'price';
   runNum: string;
   runPrice: string;
@@ -14,28 +14,38 @@ export type SettingState = {
   dot: string;
   type: 'Buy' | 'Sell';
   mode: 'Reverse' | 'Order';
-  // 卖出超时次数(超出次数将以最佳价格卖出止损)
+  // Số lần quá hạn bán ra (vượt quá sẽ bán cắt lỗ ở giá tốt nhất)
   timeoutCount: string;
-  // 下单金额模式 固定金额 随机金额
+  // Chế độ số tiền đặt lệnh: cố định hoặc ngẫu nhiên
   orderAmountMode: 'Fixed' | 'Random';
-  // 最高随机金额
+  // Số tiền ngẫu nhiên tối đa
   maxAmount: string;
-  // 最低随机金额
+  // Số tiền ngẫu nhiên tối thiểu
   minAmount: string;
-  // 二次验证(secret)
+  // Xác thực lần hai (secret)
   secret: string;
-  // api地址
+  // Địa chỉ API
   api: string;
 
-  // 最小时间延迟
+  // Thời gian trễ tối thiểu
   minSleep: string;
-  // 最大时间间隔
+  // Khoảng thời gian tối đa
   maxSleep: string;
 
   minDiscount: string;
   maxDiscount: string;
   // 溢价率
   priceRatio: string;
+  // Tỷ lệ tăng giá mua khi uptrend (%)
+  buyPriceIncrease: string;
+  // Chế độ đảo chiều: safe (bán thấp hơn) hoặc profit (bán cao hơn)
+  reverseMode: 'safe' | 'profit';
+  // Tổn hao tối đa cho phép (USDT) - dừng khi tổn hao >= giá trị này
+  maxLoss: string;
+  // Bật/tắt giới hạn tổn hao
+  maxLossEnabled: boolean;
+  // Bật/tắt dynamic discount (tính chiết khấu theo volatility & momentum)
+  dynamicDiscountEnabled: boolean;
 };
 
 // eslint-disable-next-line import-x/exports-last
@@ -66,8 +76,12 @@ const storage = createStorage<SettingState>(
 
     minDiscount: '0.2',
     maxDiscount: '0.5',
-
     priceRatio: '0.5',
+    buyPriceIncrease: '0.01',
+    reverseMode: 'profit',
+    maxLoss: '10',
+    maxLossEnabled: false,
+    dynamicDiscountEnabled: false,
   },
   {
     storageEnum: StorageEnum.Local,
